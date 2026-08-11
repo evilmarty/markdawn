@@ -1,12 +1,19 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import YamlParser from 'js-yaml'
+import FrontmatterDialog from './components/FrontmatterDialog'
+import {
+  applyFrontmatter,
+  makeFrontmatterRow,
+  parseFrontmatterRows,
+  rowsToFrontmatter,
+  splitFrontmatter,
+} from './lib/frontmatter'
+import { useSessionDraftPersistence } from './hooks/useSessionDraftPersistence'
 
 const EditorWorkspace = lazy(() => import('./EditorWorkspace'))
 
 const SESSION_STORAGE_KEY = 'markymark.session.v2'
 const SESSION_THEME_KEY = 'markymark.theme'
 const DEFAULT_THEME = 'light'
-const SESSION_PERSIST_DEBOUNCE_MS = 350
 const DAISY_THEMES = [
   'light',
   'dark',
@@ -44,81 +51,6 @@ Welcome to Markdawn, your editable Markdown preview.
 > Tip: use the toolbar above to insert rich content quickly.
 `
 
-function splitFrontmatter(markdown) {
-  const match = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)
-  if (!match) return { frontmatter: '', body: markdown }
-  return {
-    frontmatter: match[1],
-    body: markdown.slice(match[0].length),
-  }
-}
-
-function applyFrontmatter(markdown, nextFrontmatter) {
-  const { body } = splitFrontmatter(markdown)
-  const cleanedBody = body.replace(/^\n+/, '')
-  const trimmedFrontmatter = nextFrontmatter.trim()
-  if (!trimmedFrontmatter) return cleanedBody
-  return `---\n${trimmedFrontmatter}\n---\n\n${cleanedBody}`
-}
-
-function makeFrontmatterRow(key = '', value = '') {
-  return {
-    id:
-      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-        ? crypto.randomUUID()
-        : `fm-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    key,
-    value,
-  }
-}
-
-function parseFrontmatterRows(markdown) {
-  const { frontmatter } = splitFrontmatter(markdown)
-  if (!frontmatter.trim()) return [makeFrontmatterRow()]
-
-  try {
-    const parsed = YamlParser.load(frontmatter)
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return [makeFrontmatterRow()]
-    }
-    const entries = Object.entries(parsed).map(([key, value]) =>
-      makeFrontmatterRow(
-        key,
-        typeof value === 'string' ? value : value == null ? '' : YamlParser.dump(value).trim(),
-      ),
-    )
-    return entries.length > 0 ? entries : [makeFrontmatterRow()]
-  } catch {
-    return [makeFrontmatterRow()]
-  }
-}
-
-function rowsToFrontmatter(rows) {
-  const data = {}
-
-  for (const row of rows) {
-    const key = row.key.trim()
-    const value = row.value.trim()
-    if (!key || !value) continue
-
-    try {
-      data[key] = YamlParser.load(value)
-    } catch {
-      data[key] = value
-    }
-  }
-
-  if (Object.keys(data).length === 0) return ''
-  return YamlParser.dump(data).trim()
-}
-
-function formatPersistError(error) {
-  const name = error?.name
-  if (name === 'QuotaExceededError') {
-    return 'Autosave paused: browser session storage is full.'
-  }
-  return `Autosave paused: ${error?.message ?? 'Failed to write draft data.'}`
-}
 
 export function makeTab({
   id,
@@ -219,9 +151,6 @@ function App() {
   const [, setStatusMessage] = useState(draftFromSession ? 'Recovered tabs from this browser session.' : 'Ready.')
   const editorRef = useRef(null)
   const fallbackOpenInputRef = useRef(null)
-  const sessionPersistTimerRef = useRef(null)
-  const pendingSessionPayloadRef = useRef(null)
-  const didReportPersistFailureRef = useRef(false)
 
   const supportsOpenFilePicker = typeof window !== 'undefined' && 'showOpenFilePicker' in window
   const supportsSaveFilePicker = typeof window !== 'undefined' && 'showSaveFilePicker' in window
@@ -239,80 +168,17 @@ function App() {
   }, [])
 
   useEffect(() => {
-    sessionStorage.setItem(SESSION_THEME_KEY, theme)
+    try {
+      sessionStorage.setItem(SESSION_THEME_KEY, theme)
+    } catch (error) {
+      setStatusMessage(`Theme preference not saved: ${error?.message ?? 'storage unavailable'}`)
+    }
   }, [theme])
 
-  const writeSessionPayload = useCallback((payload) => {
-    try {
-      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(payload))
-      if (didReportPersistFailureRef.current) {
-        setStatusMessage('Autosave restored.')
-      }
-      didReportPersistFailureRef.current = false
-      return true
-    } catch (error) {
-      if (!didReportPersistFailureRef.current) {
-        setStatusMessage(formatPersistError(error))
-        didReportPersistFailureRef.current = true
-      }
-      return false
-    }
-  }, [])
-
-  const flushSessionPersist = useCallback(() => {
-    const payload = pendingSessionPayloadRef.current
-    if (!payload) return
-    pendingSessionPayloadRef.current = null
-    if (sessionPersistTimerRef.current) {
-      clearTimeout(sessionPersistTimerRef.current)
-      sessionPersistTimerRef.current = null
-    }
-    writeSessionPayload(payload)
-  }, [writeSessionPayload])
-
-  const persistTabsToSession = useCallback(
-    (nextTabs, nextActiveTabId, { flush = false } = {}) => {
-      pendingSessionPayloadRef.current = {
-        tabs: nextTabs.map(({ id, fileName, markdown, savedMarkdown, isDirty }) => ({
-          id,
-          fileName,
-          markdown,
-          savedMarkdown,
-          isDirty,
-        })),
-        activeTabId: nextActiveTabId,
-        updatedAt: Date.now(),
-      }
-
-      if (flush) {
-        flushSessionPersist()
-        return
-      }
-
-      if (sessionPersistTimerRef.current) clearTimeout(sessionPersistTimerRef.current)
-      sessionPersistTimerRef.current = setTimeout(() => {
-        sessionPersistTimerRef.current = null
-        flushSessionPersist()
-      }, SESSION_PERSIST_DEBOUNCE_MS)
-    },
-    [flushSessionPersist],
-  )
-
-  useEffect(
-    () => () => {
-      flushSessionPersist()
-      if (sessionPersistTimerRef.current) clearTimeout(sessionPersistTimerRef.current)
-    },
-    [flushSessionPersist],
-  )
-
-  useEffect(() => {
-    const flushOnHide = () => flushSessionPersist()
-    window.addEventListener('pagehide', flushOnHide)
-    return () => {
-      window.removeEventListener('pagehide', flushOnHide)
-    }
-  }, [flushSessionPersist])
+  const { persistTabsToSession } = useSessionDraftPersistence({
+    sessionKey: SESSION_STORAGE_KEY,
+    setStatusMessage,
+  })
 
   const updateTab = useCallback((tabId, updater) => {
     setTabs((prevTabs) =>
@@ -703,80 +569,13 @@ function App() {
         onChange={onFallbackFilePicked}
       />
 
-      {frontmatterDialogOpen && (
-        <div className="modal modal-open z-[70]">
-          <div className="modal-box w-full max-w-2xl">
-            <h3 className="mb-3 text-lg font-semibold">Edit front matter</h3>
-            <div className="mb-2 grid grid-cols-[2fr_3fr_auto] gap-2 px-1 text-xs font-semibold text-base-content/70">
-              <span>Key</span>
-              <span>Value</span>
-              <span />
-            </div>
-            <div className="space-y-2">
-              {frontmatterRows.map((row, index) => (
-                <div key={row.id} className="join w-full">
-                  <input
-                    className="input input-bordered input-sm join-item w-2/5"
-                    value={row.key}
-                    onChange={(event) =>
-                      setFrontmatterRows((prevRows) =>
-                        prevRows.map((entry) =>
-                          entry.id === row.id ? { ...entry, key: event.target.value } : entry,
-                        ),
-                      )
-                    }
-                    autoFocus={index === 0}
-                  />
-                  <input
-                    className="input input-bordered input-sm join-item w-3/5"
-                    value={row.value}
-                    onChange={(event) =>
-                      setFrontmatterRows((prevRows) =>
-                        prevRows.map((entry) =>
-                          entry.id === row.id ? { ...entry, value: event.target.value } : entry,
-                        ),
-                      )
-                    }
-                  />
-                  <button
-                    className="btn btn-secondary btn-sm join-item"
-                    type="button"
-                    aria-label="Remove row"
-                    onClick={() =>
-                      setFrontmatterRows((prevRows) => {
-                        const nextRows = prevRows.filter((entry) => entry.id !== row.id)
-                        return nextRows.length > 0 ? nextRows : [makeFrontmatterRow()]
-                      })
-                    }
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 flex items-center justify-between gap-2">
-              <button
-                className="btn btn-ghost btn-sm"
-                type="button"
-                onClick={() => setFrontmatterRows((prevRows) => [...prevRows, makeFrontmatterRow()])}
-              >
-                Add entry
-              </button>
-              <div className="flex gap-2">
-                <button className="btn" type="button" onClick={() => setFrontmatterDialogOpen(false)}>
-                  Cancel
-                </button>
-                <button className="btn btn-primary" type="button" onClick={handleSaveFrontmatter}>
-                  Save
-                </button>
-              </div>
-            </div>
-          </div>
-          <button className="modal-backdrop" type="button" onClick={() => setFrontmatterDialogOpen(false)}>
-            Close
-          </button>
-        </div>
-      )}
+      <FrontmatterDialog
+        open={frontmatterDialogOpen}
+        rows={frontmatterRows}
+        setRows={setFrontmatterRows}
+        onCancel={() => setFrontmatterDialogOpen(false)}
+        onSave={handleSaveFrontmatter}
+      />
     </main>
   )
 }

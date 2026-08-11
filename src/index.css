@@ -35,20 +35,22 @@ body {
   overflow: auto;
 }
 
-/* Align MDXEditor internals with DaisyUI visual language. */
-.mdxeditor :is([class*='_toolbarButton_'], [class*='_toolbarToggleItem_'], [class*='_selectTrigger_']) {
+/* Prefer stable toolbar element selectors, then keep narrow internal fallbacks when needed. */
+.mdxeditor .mdxeditor-toolbar :is(button, [role='button'], select),
+.mdxeditor [class*='_selectTrigger_'] {
   border: 1px solid oklch(var(--b3));
   border-radius: var(--radius-field);
   background: oklch(var(--b1));
   color: oklch(var(--bc));
 }
 
-.mdxeditor :is([class*='_toolbarButton_'], [class*='_toolbarToggleItem_'], [class*='_selectTrigger_']):hover {
+.mdxeditor .mdxeditor-toolbar :is(button, [role='button'], select):hover,
+.mdxeditor [class*='_selectTrigger_']:hover {
   background: oklch(var(--b2));
 }
 
-.mdxeditor :is([class*='_toolbarButton_'], [class*='_toolbarToggleItem_'])[data-state='on'],
-.mdxeditor :is([class*='_toolbarButton_'], [class*='_toolbarToggleItem_']):active {
+.mdxeditor .mdxeditor-toolbar :is(button, [role='button'])[data-state='on'],
+.mdxeditor .mdxeditor-toolbar :is(button, [role='button']):active {
   border-color: oklch(var(--p));
   background: oklch(var(--p) / 0.12);
   color: oklch(var(--pc));

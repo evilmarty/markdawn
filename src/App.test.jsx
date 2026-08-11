@@ -10,6 +10,7 @@ vi.mock('./EditorWorkspace', () => {
     editorRef,
     mobileSidebarOpen,
     onChange,
+    onOpenFrontmatterDialog,
     onSaveFile,
     onToggleMobileSidebar,
     saveButtonClass,
@@ -39,6 +40,9 @@ vi.mock('./EditorWorkspace', () => {
           onClick={onToggleMobileSidebar}
         >
           Toggle Sidebar
+        </button>
+        <button type="button" onClick={onOpenFrontmatterDialog}>
+          Open Frontmatter
         </button>
         {supportsSaveFilePicker && (
           <button type="button" onClick={() => void onSaveFile({ saveAs: true })}>
@@ -230,6 +234,7 @@ describe('App', () => {
 
   afterEach(() => {
     cleanup()
+    vi.useRealTimers()
   })
 
   it('starts with clean save state and turns dirty only after edits', async () => {
@@ -451,6 +456,54 @@ describe('App', () => {
     const hiddenFileInput = document.querySelector('input[type="file"]')
     fireEvent.change(hiddenFileInput, { target: { files: [] } })
     expect(screen.getAllByRole('button', { name: 'untitled.md' })[0]).toBeInTheDocument()
+  })
+
+  it('persists selected theme into session storage', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Theme' }), 'dracula')
+    expect(sessionStorage.getItem('markymark.theme')).toBe('dracula')
+  })
+
+  it('flushes pending autosave on pagehide before debounce timer', async () => {
+    render(<App />)
+
+    fireEvent.click(firstButton('Mock Edit'))
+    expect(firstButton('Save')).not.toHaveClass('btn-outline')
+    const draftBeforePagehide = sessionStorage.getItem('markymark.session.v2')
+    expect(draftBeforePagehide).toBeNull()
+
+    window.dispatchEvent(new Event('pagehide'))
+    const draftAfterPagehide = sessionStorage.getItem('markymark.session.v2')
+    expect(draftAfterPagehide).toContain('edit')
+  })
+
+  it('writes autosave after debounce window without explicit flush', async () => {
+    render(<App />)
+    fireEvent.click(firstButton('Mock Edit'))
+    expect(firstButton('Save')).not.toHaveClass('btn-outline')
+    expect(sessionStorage.getItem('markymark.session.v2')).toBeNull()
+    await new Promise((resolve) => setTimeout(resolve, 400))
+    expect(sessionStorage.getItem('markymark.session.v2')).toContain('edit')
+  })
+
+  it('opens frontmatter dialog and saves frontmatter into the active document', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(firstButton('Open Frontmatter'))
+    expect(screen.getByText('Edit front matter')).toBeInTheDocument()
+
+    const inputs = screen.getAllByRole('textbox')
+    await user.clear(inputs[0])
+    await user.type(inputs[0], 'title')
+    await user.clear(inputs[1])
+    await user.type(inputs[1], 'Demo')
+    const saveButtons = screen.getAllByRole('button', { name: 'Save' })
+    await user.click(saveButtons[saveButtons.length - 1])
+
+    expect(screen.queryByText('Edit front matter')).not.toBeInTheDocument()
+    expect(firstButton('Save')).not.toHaveClass('btn-outline')
   })
 })
 

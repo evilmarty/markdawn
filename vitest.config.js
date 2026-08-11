@@ -7,7 +7,10 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary'],
-      include: ['src/App.jsx'],
+      include: [
+        'src/App.jsx',
+        'src/lib/frontmatter.js',
+      ],
       thresholds: {
         lines: 90,
         functions: 90,

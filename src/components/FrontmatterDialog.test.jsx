@@ -1,0 +1,46 @@
+import { cleanup, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import FrontmatterDialog from './FrontmatterDialog'
+
+describe('FrontmatterDialog', () => {
+  afterEach(() => {
+    cleanup()
+  })
+
+  it('renders rows and triggers save/cancel actions', async () => {
+    const user = userEvent.setup()
+    const setRows = vi.fn()
+    const onCancel = vi.fn()
+    const onSave = vi.fn()
+
+    render(
+      <FrontmatterDialog
+        open
+        rows={[{ id: '1', key: 'title', value: 'Demo' }]}
+        setRows={setRows}
+        onCancel={onCancel}
+        onSave={onSave}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(onSave).toHaveBeenCalledOnce()
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(onCancel).toHaveBeenCalledOnce()
+  })
+
+  it('does not render when closed', () => {
+    render(
+      <FrontmatterDialog
+        open={false}
+        rows={[]}
+        setRows={vi.fn()}
+        onCancel={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    )
+    expect(screen.queryByText('Edit front matter')).not.toBeInTheDocument()
+  })
+})
