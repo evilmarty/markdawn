@@ -11,6 +11,8 @@
 - Use DaisyUI for **all UI-related styles**.
 - Build UI controls/layouts with DaisyUI components and classes first; avoid custom styling unless absolutely necessary.
 - Keep UI changes aligned with existing DaisyUI patterns and utility classes.
+- Keep heavy editor/plugin wiring in `src/EditorWorkspace.jsx`, and keep `src/App.jsx` loading it lazily to protect startup performance.
+- Keep draft autosave writes debounced; flush pending session writes on critical actions/page hide and surface storage/quota write failures to users.
 - Preserve multi-tab behavior and per-tab dirty tracking:
   - `isDirty` drives Save button styling and unsaved indicators.
   - Unsaved close confirmation must remain in place.

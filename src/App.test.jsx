@@ -4,6 +4,85 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App, { downloadTextFile, fileToDataUrl, loadDraftFromSession, makeTab } from './App'
 
+vi.mock('./EditorWorkspace', () => {
+  const MockEditorWorkspace = ({
+    activeTab,
+    editorRef,
+    mobileSidebarOpen,
+    onChange,
+    onSaveFile,
+    onToggleMobileSidebar,
+    saveButtonClass,
+    supportsSaveFilePicker,
+    imageUploadHandler,
+  }) => {
+    const [value, setValue] = useState(activeTab.markdown)
+
+    useEffect(() => {
+      setValue(activeTab.markdown)
+    }, [activeTab.markdown])
+
+    useImperativeHandle(editorRef, () => ({
+      getMarkdown: () => value,
+      setMarkdown: (next) => setValue(next),
+      insertMarkdown: (next) => setValue((prev) => prev + next),
+      focus: () => {},
+      getContentEditableHTML: () => value,
+      getSelectionMarkdown: () => value,
+    }))
+
+    return (
+      <div>
+        <button
+          type="button"
+          aria-label={mobileSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+          onClick={onToggleMobileSidebar}
+        >
+          Toggle Sidebar
+        </button>
+        {supportsSaveFilePicker && (
+          <button type="button" onClick={() => void onSaveFile({ saveAs: true })}>
+            Save As
+          </button>
+        )}
+        <button className={saveButtonClass} type="button" onClick={() => void onSaveFile()}>
+          Save
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            const next = `${value}\nedit`
+            setValue(next)
+            onChange?.(next, false)
+          }}
+        >
+          Mock Edit
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            const next = value.trim()
+            setValue(next)
+            onChange?.(next, true)
+          }}
+        >
+          Mock Normalize
+        </button>
+        <button
+          type="button"
+          onClick={async () => {
+            await imageUploadHandler?.(new File(['img'], 'img.png', { type: 'image/png' }))
+          }}
+        >
+          Mock Image Upload
+        </button>
+      </div>
+    )
+  }
+
+  return { default: MockEditorWorkspace }
+})
+
 vi.mock('@mdxeditor/editor', async () => {
   const makeButton = (label) => function Button() {
     return <button type="button">{label}</button>
@@ -158,7 +237,7 @@ describe('App', () => {
     mockSavePicker()
     render(<App />)
 
-    const saveButton = firstButton('Save')
+    const saveButton = await screen.findByRole('button', { name: 'Save' })
     expect(saveButton).toHaveClass('btn-outline')
 
     await user.click(firstButton('Mock Edit'))
