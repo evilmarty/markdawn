@@ -1,0 +1,128 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+@plugin 'daisyui' {
+  themes: all;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  background: oklch(var(--b2));
+}
+
+#root {
+  min-height: 100svh;
+}
+
+.mdxeditor {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+}
+
+.mdxeditor .mdxeditor-toolbar {
+  border-bottom: 1px solid oklch(var(--b3));
+  background: oklch(var(--b1));
+  overflow: visible;
+}
+
+.mdxeditor .mdxeditor-root-contenteditable {
+  flex: 1;
+  overflow: auto;
+}
+
+/* Align MDXEditor internals with DaisyUI visual language. */
+.mdxeditor :is([class*='_toolbarButton_'], [class*='_toolbarToggleItem_'], [class*='_selectTrigger_']) {
+  border: 1px solid oklch(var(--b3));
+  border-radius: var(--radius-field);
+  background: oklch(var(--b1));
+  color: oklch(var(--bc));
+}
+
+.mdxeditor :is([class*='_toolbarButton_'], [class*='_toolbarToggleItem_'], [class*='_selectTrigger_']):hover {
+  background: oklch(var(--b2));
+}
+
+.mdxeditor :is([class*='_toolbarButton_'], [class*='_toolbarToggleItem_'])[data-state='on'],
+.mdxeditor :is([class*='_toolbarButton_'], [class*='_toolbarToggleItem_']):active {
+  border-color: oklch(var(--p));
+  background: oklch(var(--p) / 0.12);
+  color: oklch(var(--pc));
+}
+
+.mdxeditor :is([class*='_dialogContent_'], [class*='_selectContainer_'], [class*='_toolbarCodeBlockLanguageSelectContent_']) {
+  border: 1px solid oklch(var(--b3));
+  border-radius: var(--radius-box);
+  background: oklch(var(--b1));
+  color: oklch(var(--bc));
+  box-shadow: 0 10px 24px oklch(0 0 0 / 0.2);
+}
+
+.mdxeditor :is([class*='_dialogInput_'], [class*='_linkDialogInput_']) {
+  border: 1px solid oklch(var(--b3));
+  border-radius: var(--radius-field);
+  background: oklch(var(--b1));
+  color: oklch(var(--bc));
+}
+
+.mdxeditor :is([class*='_dialogInput_'], [class*='_linkDialogInput_']):focus {
+  outline: 2px solid oklch(var(--p) / 0.45);
+  outline-offset: 1px;
+}
+
+/* Prevent prose image margins from shifting MDXEditor resize anchors. */
+.mdxeditor [data-editor-block-type='image'] img {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* Keep MDXEditor image resize handles aligned while protruding slightly. */
+.mdxeditor [class*='_imageResizer_'][class*='_imageResizerN_'] {
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.mdxeditor [class*='_imageResizer_'][class*='_imageResizerNe_'] {
+  top: -4px;
+  right: -4px;
+}
+
+.mdxeditor [class*='_imageResizer_'][class*='_imageResizerE_'] {
+  top: 50%;
+  right: -4px;
+  bottom: auto;
+  transform: translateY(-50%);
+}
+
+.mdxeditor [class*='_imageResizer_'][class*='_imageResizerSe_'] {
+  right: -4px;
+  bottom: -4px;
+}
+
+.mdxeditor [class*='_imageResizer_'][class*='_imageResizerS_'] {
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.mdxeditor [class*='_imageResizer_'][class*='_imageResizerSw_'] {
+  bottom: -4px;
+  left: -4px;
+}
+
+.mdxeditor [class*='_imageResizer_'][class*='_imageResizerW_'] {
+  top: 50%;
+  bottom: auto;
+  left: -4px;
+  transform: translateY(-50%);
+}
+
+.mdxeditor [class*='_imageResizer_'][class*='_imageResizerNw_'] {
+  top: -4px;
+  left: -4px;
+}
