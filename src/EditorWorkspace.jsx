@@ -55,9 +55,28 @@ const CODE_BLOCK_LANGUAGES = {
 
 const editorLexicalTheme = {
   ...mdxLexicalTheme,
+  quote: 'mdx-quote',
   text: {
     ...mdxLexicalTheme.text,
     code: 'kbd kbd-sm',
+  },
+  list: {
+    ...mdxLexicalTheme.list,
+    listitem: 'mdx-listitem',
+    listitemChecked: 'mdx-listitem-checked',
+    listitemUnchecked: 'mdx-listitem-unchecked',
+    nested: {
+      ...mdxLexicalTheme.list?.nested,
+      listitem: 'mdx-listitem-nested',
+    },
+  },
+  admonition: {
+    ...mdxLexicalTheme.admonition,
+    note: 'mdx-admonition mdx-admonition-note',
+    tip: 'mdx-admonition mdx-admonition-tip',
+    info: 'mdx-admonition mdx-admonition-info',
+    caution: 'mdx-admonition mdx-admonition-caution',
+    danger: 'mdx-admonition mdx-admonition-danger',
   },
 }
 

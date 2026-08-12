@@ -111,6 +111,36 @@ body {
   content: none !important;
 }
 
+/* Lexical node theme classes (wired via MDXEditor lexicalTheme). */
+.mdxeditor .mdx-quote {
+  @apply border-l-4 border-base-300 pl-4 text-base-content/90;
+}
+
+.mdxeditor :is(.mdx-listitem, .mdx-listitem-nested, .mdx-listitem-checked, .mdx-listitem-unchecked) {
+  @apply text-base-content;
+}
+
+.mdxeditor .mdx-admonition {
+  @apply rounded-box border border-base-300 bg-base-100 p-3 text-base-content;
+}
+
+.mdxeditor .mdx-admonition-note,
+.mdxeditor .mdx-admonition-info {
+  @apply border-info/40 bg-info/10;
+}
+
+.mdxeditor .mdx-admonition-tip {
+  @apply border-success/40 bg-success/10;
+}
+
+.mdxeditor .mdx-admonition-caution {
+  @apply border-warning/40 bg-warning/10;
+}
+
+.mdxeditor .mdx-admonition-danger {
+  @apply border-error/40 bg-error/10;
+}
+
 /* Style MDX toolbar controls only; leave DaisyUI .btn buttons (Save/Save As) untouched. */
 .mdxeditor :is(
     [class*='_toolbarToggleItem_'],
@@ -146,7 +176,7 @@ body {
   color: oklch(var(--bc)) !important;
 }
 
-:is([class*='_toolbarNodeKindSelectContainer_'], [class*='_toolbarButtonDropdownContainer_'], [class*='_toolbarCodeBlockLanguageSelectContent_'], [class*='_selectContainer_']) {
+.mdxeditor :is([class*='_toolbarNodeKindSelectContainer_'], [class*='_toolbarButtonDropdownContainer_'], [class*='_toolbarCodeBlockLanguageSelectContent_'], [class*='_selectContainer_']) {
   @apply rounded-box border border-base-300 bg-base-100 text-base-content shadow-xl;
 }
 
@@ -165,12 +195,12 @@ body {
   opacity: 1 !important;
 }
 
-:is([class*='_toolbarNodeKindSelectItem_'], [class*='_selectItem_']) {
+.mdxeditor :is([class*='_toolbarNodeKindSelectItem_'], [class*='_selectItem_']) {
   @apply bg-transparent text-base-content;
 }
 
-:is([class*='_toolbarNodeKindSelectItem_'], [class*='_selectItem_'])[data-highlighted],
-:is([class*='_toolbarNodeKindSelectItem_'], [class*='_selectItem_'])[data-state='checked'] {
+.mdxeditor :is([class*='_toolbarNodeKindSelectItem_'], [class*='_selectItem_'])[data-highlighted],
+.mdxeditor :is([class*='_toolbarNodeKindSelectItem_'], [class*='_selectItem_'])[data-state='checked'] {
   @apply bg-base-200;
 }
 
@@ -181,7 +211,6 @@ body {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-  color: oklch(var(--bc));
   padding: 0;
   overflow: visible;
 }
@@ -191,6 +220,7 @@ body {
   border-radius: var(--radius-box);
   box-shadow: 0 6px 18px oklch(0 0 0 / 0.12);
   overflow: hidden;
+  padding: 0 !important;
 }
 
 .mdxeditor [class*='_codeMirrorToolbar_'] {
@@ -203,10 +233,6 @@ body {
   background-color: oklch(var(--b1)) !important;
   box-shadow: 0 8px 20px oklch(0 0 0 / 0.18);
   backdrop-filter: blur(6px);
-}
-
-.mdxeditor [class*='_codeMirrorWrapper_'] .cm-editor {
-  padding: 0 !important;
 }
 
 .mdxeditor [class*='_codeMirrorWrapper_'] .cm-scroller {
