@@ -11,6 +11,7 @@
 - Use DaisyUI for **all UI-related styles**.
 - Build UI controls/layouts with DaisyUI components and classes first; avoid custom styling unless absolutely necessary.
 - Keep UI changes aligned with existing DaisyUI patterns and utility classes.
+- For MDXEditor content-node styling, prefer `lexicalTheme` class overrides first (inline code, quote, list, admonitions) and keep CSS for editor chrome (toolbar, dialogs, dropdown portals, CodeMirror shell).
 - Keep heavy editor/plugin wiring in `src/EditorWorkspace.jsx`, and keep `src/App.jsx` loading it lazily to protect startup performance.
 - Keep draft autosave writes debounced; flush pending session writes on critical actions/page hide and surface storage/quota write failures to users.
 - Preserve multi-tab behavior and per-tab dirty tracking:
@@ -19,12 +20,24 @@
 - Keep code block support wired through both:
   - `codeBlockPlugin(...)`
   - `codeMirrorPlugin(...)` with explicit language registry.
+- Keep `data-theme` applied to `document.body` so Radix/portal-rendered editor popups inherit DaisyUI theme tokens.
 
 ## Key behavior expectations
 - New tabs start **clean** and become dirty only after edits.
 - Save button is right-aligned in the editor toolbar.
 - On small screens (`< lg`), sidebar is off-canvas and toggled by toolbar hamburger.
 - Mobile toolbar uses ellipsis dropdown for advanced actions.
+
+## MDXEditor theming and debugging guardrails
+- Do not guess on styling regressions. Inspect the rendered DOM/class chain first and target the exact element receiving/losing styles.
+- Scope overrides under `.mdxeditor` unless a portal element lives outside it (e.g. `[data-radix-popper-content-wrapper]`).
+- Avoid broad selectors like `.mdxeditor-toolbar button` that can unintentionally restyle DaisyUI `btn` controls (Save/Save As).
+- Prefer stable semantic hooks (`.mdxeditor-select-content`, `[data-editor-dropdown='true']`) and minimize reliance on hashed internal class fragments.
+- For inline code, style a single element only (the lexical theme class target) and keep wrapper `<code>` neutral to prevent double styling.
+- For code blocks, separate responsibilities:
+  - wrapper: positioning/overflow for floating toolbar
+  - inner editor surface: border/radius/shadow
+  - avoid overriding CodeMirror syntax-token colors/background unless explicitly intended
 
 ## Useful commands
 - Install deps: `npm install`
