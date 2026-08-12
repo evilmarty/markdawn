@@ -146,6 +146,7 @@ function App() {
     }
   })
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true)
   const [frontmatterDialogOpen, setFrontmatterDialogOpen] = useState(false)
   const [frontmatterRows, setFrontmatterRows] = useState(() => [makeFrontmatterRow()])
   const [, setStatusMessage] = useState(draftFromSession ? 'Recovered tabs from this browser session.' : 'Ready.')
@@ -443,9 +444,9 @@ function App() {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex h-screen w-72 shrink-0 flex-col border-r border-base-300 bg-base-100 p-3 transition-transform duration-300 ease-out lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex h-screen w-72 shrink-0 flex-col border-r border-base-300 bg-base-100 p-3 transition-all duration-300 ease-out lg:static lg:z-auto lg:translate-x-0 ${
           mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        } ${desktopSidebarOpen ? 'lg:w-72 lg:p-3 lg:border-r' : 'lg:w-0 lg:p-0 lg:border-r-0 lg:overflow-hidden'}`}
       >
         <div
           className="mb-3 flex justify-center text-base-content"
@@ -533,6 +534,7 @@ function App() {
                 editorRef={editorRef}
                 hasFrontmatter={hasFrontmatter}
                 mobileSidebarOpen={mobileSidebarOpen}
+                desktopSidebarOpen={desktopSidebarOpen}
                 onChange={(nextMarkdown, initialMarkdownNormalize) => {
                   setTabs((prevTabs) => {
                     const nextTabs = prevTabs.map((tab) =>
@@ -555,6 +557,7 @@ function App() {
                 }}
                 onSaveFile={handleSaveFile}
                 onToggleMobileSidebar={() => setMobileSidebarOpen((open) => !open)}
+                onToggleDesktopSidebar={() => setDesktopSidebarOpen((open) => !open)}
                 onOpenFrontmatterDialog={handleOpenFrontmatterDialog}
                 saveButtonClass={saveButtonClass}
                 supportsSaveFilePicker={supportsSaveFilePicker}

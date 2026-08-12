@@ -378,9 +378,11 @@ function EditorWorkspace({
   editorRef,
   hasFrontmatter,
   mobileSidebarOpen,
+  desktopSidebarOpen,
   onChange,
   onSaveFile,
   onToggleMobileSidebar,
+  onToggleDesktopSidebar,
   onOpenFrontmatterDialog,
   saveButtonClass,
   supportsSaveFilePicker,
@@ -399,6 +401,16 @@ function EditorWorkspace({
             >
               <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" aria-hidden="true">
                 <path d="M2 4h12M2 8h12M2 12h12" fill="none" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+            </button>
+            <button
+              className="btn btn-xs btn-ghost hidden lg:inline-flex"
+              type="button"
+              aria-label={desktopSidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+              onClick={onToggleDesktopSidebar}
+            >
+              <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M2 3.5h12M2 8h12M2 12.5h12" fill="none" stroke="currentColor" strokeWidth="1.5" />
               </svg>
             </button>
             <UndoRedo />
@@ -473,9 +485,11 @@ function EditorWorkspace({
     [
       hasFrontmatter,
       imageUploadHandler,
+      desktopSidebarOpen,
       mobileSidebarOpen,
       onOpenFrontmatterDialog,
       onSaveFile,
+      onToggleDesktopSidebar,
       onToggleMobileSidebar,
       saveButtonClass,
       supportsSaveFilePicker,
