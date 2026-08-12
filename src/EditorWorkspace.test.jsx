@@ -60,6 +60,11 @@ vi.mock('@mdxeditor/editor', async () => {
   return {
     MDXEditor,
     ButtonWithTooltip,
+    lexicalTheme: {
+      text: {
+        code: 'mock-inline-code',
+      },
+    },
     toolbarPlugin,
     headingsPlugin: plugin('headings'),
     frontmatterPlugin: plugin('frontmatter'),

@@ -35,28 +35,210 @@ body {
   overflow: auto;
 }
 
-/* Prefer stable toolbar element selectors, then keep narrow internal fallbacks when needed. */
-.mdxeditor .mdxeditor-toolbar :is(button, [role='button'], select),
-.mdxeditor [class*='_selectTrigger_'] {
+/* Map MDXEditor design tokens to DaisyUI theme tokens for editor + popup portals. */
+[data-theme] :is(.mdxeditor, .mdxeditor-popup-container) {
+  --basePageBg: oklch(var(--b1));
+  --baseBase: oklch(var(--b1));
+  --baseBgSubtle: oklch(var(--b2));
+  --baseBg: oklch(var(--b2));
+  --baseBgHover: oklch(var(--b2));
+  --baseBgActive: oklch(var(--b3));
+  --baseLine: oklch(var(--b3));
+  --baseBorder: oklch(var(--b3));
+  --baseBorderHover: oklch(var(--b3));
+  --baseSolid: oklch(var(--bc) / 0.55);
+  --baseSolidHover: oklch(var(--bc) / 0.7);
+  --baseText: oklch(var(--bc) / 0.85);
+  --baseTextContrast: oklch(var(--bc));
+
+  --accentBase: oklch(var(--p) / 0.08);
+  --accentBgSubtle: oklch(var(--p) / 0.12);
+  --accentBg: oklch(var(--p) / 0.16);
+  --accentBgHover: oklch(var(--p) / 0.22);
+  --accentBgActive: oklch(var(--p) / 0.28);
+  --accentLine: oklch(var(--p) / 0.3);
+  --accentBorder: oklch(var(--p) / 0.35);
+  --accentBorderHover: oklch(var(--p) / 0.45);
+  --accentSolid: oklch(var(--p));
+  --accentSolidHover: oklch(var(--p));
+  --accentText: oklch(var(--p));
+  --accentTextContrast: oklch(var(--pc));
+}
+
+[data-theme] .mdxeditor-popup-container {
+  position: relative;
+  z-index: 70;
+}
+
+[data-theme] [data-radix-popper-content-wrapper] {
+  z-index: 90 !important;
+}
+
+/* Bind prose typography colors to DaisyUI theme tokens. */
+.mdxeditor .prose {
+  color: oklch(var(--bc)) !important;
+  --tw-prose-body: oklch(var(--bc)) !important;
+  --tw-prose-headings: oklch(var(--bc)) !important;
+  --tw-prose-lead: oklch(var(--bc) / 0.85) !important;
+  --tw-prose-links: oklch(var(--p)) !important;
+  --tw-prose-bold: oklch(var(--bc)) !important;
+  --tw-prose-counters: oklch(var(--bc) / 0.7) !important;
+  --tw-prose-bullets: oklch(var(--bc) / 0.45) !important;
+  --tw-prose-hr: oklch(var(--b3)) !important;
+  --tw-prose-quotes: oklch(var(--bc)) !important;
+  --tw-prose-quote-borders: oklch(var(--b3)) !important;
+  --tw-prose-captions: oklch(var(--bc) / 0.75) !important;
+  --tw-prose-code: oklch(var(--bc)) !important;
+  --tw-prose-pre-code: oklch(var(--bc)) !important;
+  --tw-prose-pre-bg: oklch(var(--b2)) !important;
+  --tw-prose-th-borders: oklch(var(--b3)) !important;
+  --tw-prose-td-borders: oklch(var(--b3)) !important;
+}
+
+/* Keep inline <code> wrapper neutral so only the themed inner span is styled. */
+.mdxeditor .prose :not(pre) > code {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: inherit !important;
+  font-weight: inherit !important;
+  padding: 0 !important;
+}
+
+.mdxeditor .prose :not(pre) > code::before,
+.mdxeditor .prose :not(pre) > code::after {
+  content: none !important;
+}
+
+/* Style MDX toolbar controls only; leave DaisyUI .btn buttons (Save/Save As) untouched. */
+.mdxeditor :is(
+    [class*='_toolbarToggleItem_'],
+    [class*='_toolbarButton_'],
+    [class*='_toolbarNodeKindSelectTrigger_'],
+    [class*='_toolbarButtonSelectTrigger_'],
+    [class*='_selectTrigger_']
+  ) {
   border: 1px solid oklch(var(--b3));
   border-radius: var(--radius-field);
   background: oklch(var(--b1));
   color: oklch(var(--bc));
 }
 
-.mdxeditor .mdxeditor-toolbar :is(button, [role='button'], select):hover,
-.mdxeditor [class*='_selectTrigger_']:hover {
+.mdxeditor :is(
+    [class*='_toolbarToggleItem_'],
+    [class*='_toolbarButton_'],
+    [class*='_toolbarNodeKindSelectTrigger_'],
+    [class*='_toolbarButtonSelectTrigger_'],
+    [class*='_selectTrigger_']
+  ):hover {
   background: oklch(var(--b2));
 }
 
-.mdxeditor .mdxeditor-toolbar :is(button, [role='button'])[data-state='on'],
-.mdxeditor .mdxeditor-toolbar :is(button, [role='button']):active {
+.mdxeditor :is([class*='_toolbarToggleItem_'], [class*='_toolbarButton_'])[data-state='on'],
+.mdxeditor :is([class*='_toolbarToggleItem_'], [class*='_toolbarButton_']):active {
   border-color: oklch(var(--p));
   background: oklch(var(--p) / 0.12);
   color: oklch(var(--pc));
 }
 
-.mdxeditor :is([class*='_dialogContent_'], [class*='_selectContainer_'], [class*='_toolbarCodeBlockLanguageSelectContent_']) {
+.mdxeditor .mdxeditor-toolbar svg {
+  color: oklch(var(--bc)) !important;
+}
+
+:is([class*='_toolbarNodeKindSelectContainer_'], [class*='_toolbarButtonDropdownContainer_'], [class*='_toolbarCodeBlockLanguageSelectContent_'], [class*='_selectContainer_']) {
+  @apply rounded-box border border-base-300 bg-base-100 text-base-content shadow-xl;
+}
+
+/* Explicitly style the Radix block type dropdown elements shown in the body portal. */
+[data-radix-popper-content-wrapper] .mdxeditor-select-content {
+  @apply rounded-box border border-base-300 bg-base-100 text-base-content shadow-xl;
+  position: relative;
+  z-index: 80;
+  background-image: none !important;
+  opacity: 1 !important;
+}
+
+[data-radix-popper-content-wrapper] .mdxeditor-select-content [data-editor-dropdown='true'] {
+  @apply bg-base-100 text-base-content;
+  background-image: none !important;
+  opacity: 1 !important;
+}
+
+:is([class*='_toolbarNodeKindSelectItem_'], [class*='_selectItem_']) {
+  @apply bg-transparent text-base-content;
+}
+
+:is([class*='_toolbarNodeKindSelectItem_'], [class*='_selectItem_'])[data-highlighted],
+:is([class*='_toolbarNodeKindSelectItem_'], [class*='_selectItem_'])[data-state='checked'] {
+  @apply bg-base-200;
+}
+
+/* Style fenced code blocks as DaisyUI card-like surfaces with a compact floating toolbar. */
+.mdxeditor [class*='_codeMirrorWrapper_'] {
+  position: relative;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: oklch(var(--bc));
+  padding: 0;
+  overflow: visible;
+}
+
+.mdxeditor [class*='_codeMirrorWrapper_'] .cm-editor {
+  border: 1px solid oklch(var(--b3));
+  border-radius: var(--radius-box);
+  box-shadow: 0 6px 18px oklch(0 0 0 / 0.12);
+  overflow: hidden;
+}
+
+.mdxeditor [class*='_codeMirrorToolbar_'] {
+  top: 0.45rem;
+  right: 0.45rem;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border: 1px solid oklch(var(--b3));
+  border-radius: var(--radius-box);
+  background-color: oklch(var(--b1)) !important;
+  box-shadow: 0 8px 20px oklch(0 0 0 / 0.18);
+  backdrop-filter: blur(6px);
+}
+
+.mdxeditor [class*='_codeMirrorWrapper_'] .cm-editor {
+  padding: 0 !important;
+}
+
+.mdxeditor [class*='_codeMirrorWrapper_'] .cm-scroller {
+  margin-top: 0 !important;
+}
+
+.mdxeditor [class*='_codeMirrorToolbar_'] :is([class*='_selectTrigger_'], [class*='_iconButton_']) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.5rem;
+  padding: 0.125rem 0.35rem;
+  border-radius: var(--radius-field);
+  color: oklch(var(--bc));
+}
+
+.mdxeditor [class*='_codeMirrorToolbar_'] [class*='_selectTrigger_'] {
+  margin: 0;
+  width: auto;
+  border: 0;
+  background: transparent;
+}
+
+.mdxeditor [class*='_codeMirrorToolbar_'] [class*='_iconButton_'] {
+  padding: 0.25rem;
+}
+
+.mdxeditor [class*='_codeMirrorToolbar_'] :is([class*='_selectTrigger_'], [class*='_iconButton_']):hover {
+  background: oklch(var(--b2));
+}
+
+.mdxeditor [class*='_dialogContent_'] {
   border: 1px solid oklch(var(--b3));
   border-radius: var(--radius-box);
   background: oklch(var(--b1));

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import FrontmatterDialog from './components/FrontmatterDialog'
+import logoSvg from './assets/logo.svg?raw'
 import {
   applyFrontmatter,
   makeFrontmatterRow,
@@ -10,6 +11,13 @@ import {
 import { useSessionDraftPersistence } from './hooks/useSessionDraftPersistence'
 
 const EditorWorkspace = lazy(() => import('./EditorWorkspace'))
+const INLINE_LOGO_SVG = logoSvg
+  .replace(/<\?xml[\s\S]*?\?>\s*/i, '')
+  .replace(/<!DOCTYPE[\s\S]*?>\s*/i, '')
+  .replace(
+    /<svg\b([^>]*)>/i,
+    '<svg$1 class="h-8 w-14 fill-current text-base" role="img" aria-label="Markdawn">',
+  )
 
 const SESSION_STORAGE_KEY = 'markymark.session.v2'
 const SESSION_THEME_KEY = 'markymark.theme'
@@ -172,6 +180,10 @@ function App() {
       sessionStorage.setItem(SESSION_THEME_KEY, theme)
     } catch (error) {
       setStatusMessage(`Theme preference not saved: ${error?.message ?? 'storage unavailable'}`)
+    }
+    document.body.setAttribute('data-theme', theme)
+    return () => {
+      document.body.removeAttribute('data-theme')
     }
   }, [theme])
 
@@ -443,9 +455,10 @@ function App() {
           mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="mb-3">
-          <h1 className="text-base font-semibold">Markdawn</h1>
-        </div>
+        <div
+          className="mb-3 flex justify-center text-base-content"
+          dangerouslySetInnerHTML={{ __html: INLINE_LOGO_SVG }}
+        />
         <div className="mb-3 flex gap-2">
           <button className="btn btn-sm flex-1" type="button" onClick={handleNewTab}>
             <svg className="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
@@ -476,7 +489,7 @@ function App() {
                     <button className="flex-1 truncate rounded-btn px-3 py-2 text-left" type="button" onClick={() => handleSwitchTab(tab.id)}>
                       {!isActive && tab.isDirty ? (
                         <span className="indicator">
-                          <span className="indicator-item status status-warning" />
+                          <span className="indicator-item indicator-start status status-warning" />
                           <span className="truncate">{tab.fileName}</span>
                         </span>
                       ) : (

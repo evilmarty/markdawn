@@ -23,6 +23,7 @@ import {
   listsPlugin,
   ListsToggle,
   markdownShortcutPlugin,
+  lexicalTheme as mdxLexicalTheme,
   MDXEditor,
   quotePlugin,
   saveImage$,
@@ -50,6 +51,14 @@ const CODE_BLOCK_LANGUAGES = {
   html: 'HTML',
   md: 'Markdown',
   yaml: 'YAML',
+}
+
+const editorLexicalTheme = {
+  ...mdxLexicalTheme,
+  text: {
+    ...mdxLexicalTheme.text,
+    code: 'kbd kbd-sm',
+  },
 }
 
 function normalizeDimension(value) {
@@ -419,7 +428,7 @@ function EditorWorkspace({
                 Save As
               </button>
             )}
-            <button className={saveButtonClass} type="button" onClick={() => void onSaveFile()}>
+            <button className={`${saveButtonClass} mr-2`} type="button" onClick={() => void onSaveFile()}>
               Save
             </button>
           </>
@@ -463,7 +472,8 @@ function EditorWorkspace({
       markdown={activeTab.markdown}
       onChange={onChange}
       className="mdxeditor h-full"
-      contentEditableClassName="prose prose-slate max-w-none"
+      contentEditableClassName="prose max-w-none text-base-content"
+      lexicalTheme={editorLexicalTheme}
       plugins={plugins}
     />
   )
