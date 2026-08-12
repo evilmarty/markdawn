@@ -276,7 +276,7 @@ describe('App', () => {
 
   it('shows dirty indicator on non-active tabs', async () => {
     sessionStorage.setItem(
-      'markymark.session.v2',
+      'markdawn.session.v1',
       JSON.stringify({
         tabs: [
           { id: 'a', fileName: 'active.md', markdown: '# active', savedMarkdown: '# active', isDirty: false },
@@ -317,7 +317,7 @@ describe('App', () => {
   it('loads stored session and keeps clean tab as non-dirty after normalize callback', async () => {
     const user = userEvent.setup()
     sessionStorage.setItem(
-      'markymark.session.v2',
+      'markdawn.session.v1',
       JSON.stringify({
         tabs: [
           {
@@ -380,7 +380,7 @@ describe('App', () => {
   it('supports close confirmation for non-active dirty tabs', async () => {
     const user = userEvent.setup()
     sessionStorage.setItem(
-      'markymark.session.v2',
+      'markdawn.session.v1',
       JSON.stringify({
         tabs: [
           { id: 'a', fileName: 'active.md', markdown: '# active', savedMarkdown: '# active', isDirty: false },
@@ -462,7 +462,7 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
     await user.selectOptions(screen.getByRole('combobox', { name: 'Theme' }), 'dracula')
-    expect(sessionStorage.getItem('markymark.theme')).toBe('dracula')
+    expect(sessionStorage.getItem('markdawn.theme')).toBe('dracula')
   })
 
   it('flushes pending autosave on pagehide before debounce timer', async () => {
@@ -470,11 +470,11 @@ describe('App', () => {
 
     fireEvent.click(firstButton('Mock Edit'))
     expect(firstButton('Save')).not.toHaveClass('btn-outline')
-    const draftBeforePagehide = sessionStorage.getItem('markymark.session.v2')
+    const draftBeforePagehide = sessionStorage.getItem('markdawn.session.v1')
     expect(draftBeforePagehide).toBeNull()
 
     window.dispatchEvent(new Event('pagehide'))
-    const draftAfterPagehide = sessionStorage.getItem('markymark.session.v2')
+    const draftAfterPagehide = sessionStorage.getItem('markdawn.session.v1')
     expect(draftAfterPagehide).toContain('edit')
   })
 
@@ -482,9 +482,9 @@ describe('App', () => {
     render(<App />)
     fireEvent.click(firstButton('Mock Edit'))
     expect(firstButton('Save')).not.toHaveClass('btn-outline')
-    expect(sessionStorage.getItem('markymark.session.v2')).toBeNull()
+    expect(sessionStorage.getItem('markdawn.session.v1')).toBeNull()
     await new Promise((resolve) => setTimeout(resolve, 400))
-    expect(sessionStorage.getItem('markymark.session.v2')).toContain('edit')
+    expect(sessionStorage.getItem('markdawn.session.v1')).toContain('edit')
   })
 
   it('opens frontmatter dialog and saves frontmatter into the active document', async () => {
@@ -524,23 +524,31 @@ describe('App helpers', () => {
     expect(dirty.isDirty).toBe(true)
   })
 
-  it('loads and migrates session drafts', () => {
+  it('loads only current session draft format', () => {
     expect(loadDraftFromSession()).toBeNull()
 
-    sessionStorage.setItem('markymark.session.v2', '{bad json')
+    sessionStorage.setItem('markdawn.session.v1', '{bad json')
     expect(loadDraftFromSession()).toBeNull()
 
-    sessionStorage.removeItem('markymark.session.v2')
     sessionStorage.setItem(
-      'markymark.session.v1',
+      'markdawn.session.v1',
+      JSON.stringify({
+        tabs: [{ id: 't1', fileName: 'saved.md', markdown: '# saved', savedMarkdown: '# saved', isDirty: false }],
+        activeTabId: 't1',
+      }),
+    )
+    const loaded = loadDraftFromSession()
+    expect(loaded.tabs).toHaveLength(1)
+    expect(loaded.tabs[0].fileName).toBe('saved.md')
+
+    sessionStorage.setItem(
+      'markdawn.session.v1',
       JSON.stringify({
         fileName: 'legacy.md',
         markdown: '# legacy',
       }),
     )
-    const migrated = loadDraftFromSession()
-    expect(migrated.tabs).toHaveLength(1)
-    expect(migrated.tabs[0].fileName).toBe('legacy.md')
+    expect(loadDraftFromSession()).toBeNull()
   })
 
   it('converts files to data url and handles failures', async () => {

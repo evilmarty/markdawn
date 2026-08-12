@@ -19,8 +19,8 @@ const INLINE_LOGO_SVG = logoSvg
     '<svg$1 class="h-8 w-14 fill-current text-base" role="img" aria-label="Markdawn">',
   )
 
-const SESSION_STORAGE_KEY = 'markymark.session.v2'
-const SESSION_THEME_KEY = 'markymark.theme'
+const SESSION_STORAGE_KEY = 'markdawn.session.v1'
+const SESSION_THEME_KEY = 'markdawn.theme'
 const DEFAULT_THEME = 'light'
 const DAISY_THEMES = [
   'light',
@@ -86,9 +86,9 @@ export function makeTab({
 
 export function loadDraftFromSession() {
   try {
-    const rawV2 = sessionStorage.getItem(SESSION_STORAGE_KEY)
-    if (rawV2) {
-      const parsed = JSON.parse(rawV2)
+    const rawSession = sessionStorage.getItem(SESSION_STORAGE_KEY)
+    if (rawSession) {
+      const parsed = JSON.parse(rawSession)
       const tabs =
         Array.isArray(parsed?.tabs) && parsed.tabs.length > 0
           ? parsed.tabs
@@ -109,15 +109,7 @@ export function loadDraftFromSession() {
       }
     }
 
-    const rawV1 = sessionStorage.getItem('markymark.session.v1')
-    if (!rawV1) return null
-    const parsedV1 = JSON.parse(rawV1)
-    if (typeof parsedV1?.markdown !== 'string') return null
-    const tab = makeTab({
-      fileName: typeof parsedV1.fileName === 'string' ? parsedV1.fileName : 'untitled.md',
-      markdown: parsedV1.markdown,
-    })
-    return { tabs: [tab], activeTabId: tab.id }
+    return null
   } catch {
     return null
   }

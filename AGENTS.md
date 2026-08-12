@@ -8,6 +8,10 @@
 - **Offline:** PWA via `vite-plugin-pwa`
 
 ## Working conventions
+- Do not take decisive product/behavior actions without explicit user instruction (e.g., adding compatibility/migration paths, changing storage versioning, altering data semantics).
+- If intent is ambiguous or uncertain, ask the user before implementing.
+- If intent appears risky and you are unsure whether to proceed safely, pause and ask first.
+- When in doubt, choose caution and ask for confirmation instead of assuming.
 - Use DaisyUI for **all UI-related styles**.
 - Build UI controls/layouts with DaisyUI components and classes first; avoid custom styling unless absolutely necessary.
 - Keep UI changes aligned with existing DaisyUI patterns and utility classes.
