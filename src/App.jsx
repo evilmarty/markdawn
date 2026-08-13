@@ -21,8 +21,9 @@ const INLINE_LOGO_SVG = logoSvg
 
 const SESSION_STORAGE_KEY = 'markdawn.session.v1'
 const SESSION_THEME_KEY = 'markdawn.theme'
-const DEFAULT_THEME = 'light'
+const DEFAULT_THEME = 'system'
 const DAISY_THEMES = [
+  'system',
   'light',
   'dark',
   'cupcake',
@@ -174,6 +175,13 @@ function App() {
     } catch (error) {
       setStatusMessage(`Theme preference not saved: ${error?.message ?? 'storage unavailable'}`)
     }
+    if (theme === 'system') {
+      document.body.removeAttribute('data-theme')
+      return () => {
+        document.body.removeAttribute('data-theme')
+      }
+    }
+
     document.body.setAttribute('data-theme', theme)
     return () => {
       document.body.removeAttribute('data-theme')
@@ -433,7 +441,7 @@ function App() {
   const saveButtonClass = activeTab?.isDirty ? 'btn btn-xs btn-primary' : 'btn btn-xs btn-primary btn-outline'
 
   return (
-    <main className="flex min-h-screen w-full bg-base-200" data-theme={theme}>
+    <main className="flex min-h-screen w-full bg-base-200">
       {mobileSidebarOpen && (
         <button
           className="fixed inset-0 z-30 bg-black/30 lg:hidden"

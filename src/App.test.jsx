@@ -465,6 +465,25 @@ describe('App', () => {
     expect(sessionStorage.getItem('markdawn.theme')).toBe('dracula')
   })
 
+  it('defaults theme to system and keeps data-theme unset', () => {
+    render(<App />)
+    expect(screen.getByRole('combobox', { name: 'Theme' })).toHaveValue('system')
+    expect(sessionStorage.getItem('markdawn.theme')).toBe('system')
+    expect(document.body).not.toHaveAttribute('data-theme')
+  })
+
+  it('removes body data-theme when switching to system', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    const themeSelect = screen.getByRole('combobox', { name: 'Theme' })
+
+    await user.selectOptions(themeSelect, 'dracula')
+    expect(document.body).toHaveAttribute('data-theme', 'dracula')
+
+    await user.selectOptions(themeSelect, 'system')
+    expect(document.body).not.toHaveAttribute('data-theme')
+  })
+
   it('flushes pending autosave on pagehide before debounce timer', async () => {
     render(<App />)
 
