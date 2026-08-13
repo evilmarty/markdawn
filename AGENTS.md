@@ -12,6 +12,7 @@
 - If intent is ambiguous or uncertain, ask the user before implementing.
 - If intent appears risky and you are unsure whether to proceed safely, pause and ask first.
 - When in doubt, choose caution and ask for confirmation instead of assuming.
+- After every change, check for remnants (unused code, stale CSS/selectors, dead imports, outdated tests/docs) and clean them up before finishing.
 - Use DaisyUI for **all UI-related styles**.
 - Build UI controls/layouts with DaisyUI components and classes first; avoid custom styling unless absolutely necessary.
 - Keep UI changes aligned with existing DaisyUI patterns and utility classes.
@@ -24,7 +25,7 @@
 - Keep code block support wired through both:
   - `codeBlockPlugin(...)`
   - `codeMirrorPlugin(...)` with explicit language registry.
-- Keep `data-theme` applied to `document.body` so Radix/portal-rendered editor popups inherit DaisyUI theme tokens.
+- Keep `data-theme` applied to `document.documentElement` (`<html>`) so Radix/portal-rendered editor popups inherit DaisyUI theme tokens.
 
 ## Key behavior expectations
 - New tabs start **clean** and become dirty only after edits.

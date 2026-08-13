@@ -163,7 +163,7 @@ body {
 }
 
 /* Keep built-in MDXEditor dropdown surfaces aligned to DaisyUI tokens. */
-.mdxeditor :is([class*='_toolbarNodeKindSelectContainer_'], [class*='_toolbarButtonDropdownContainer_'], [class*='_toolbarCodeBlockLanguageSelectContent_'], [class*='_selectContainer_']) {
+.mdxeditor :is([class*='_toolbarCodeBlockLanguageSelectContent_'], [class*='_selectContainer_']) {
   @apply rounded-box border border-base-300 bg-base-100 text-base-content shadow-xl;
 }
 
@@ -182,12 +182,12 @@ body {
   opacity: 1 !important;
 }
 
-.mdxeditor :is([class*='_toolbarNodeKindSelectItem_'], [class*='_selectItem_']) {
+.mdxeditor [class*='_selectItem_'] {
   @apply bg-transparent text-base-content;
 }
 
-.mdxeditor :is([class*='_toolbarNodeKindSelectItem_'], [class*='_selectItem_'])[data-highlighted],
-.mdxeditor :is([class*='_toolbarNodeKindSelectItem_'], [class*='_selectItem_'])[data-state='checked'] {
+.mdxeditor [class*='_selectItem_'][data-highlighted],
+.mdxeditor [class*='_selectItem_'][data-state='checked'] {
   @apply bg-base-200;
 }
 

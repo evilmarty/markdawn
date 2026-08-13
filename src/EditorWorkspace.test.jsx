@@ -23,19 +23,10 @@ vi.mock('lexical', () => ({
 }))
 
 vi.mock('@mdxeditor/editor', async () => {
-  const makeButton = (label) => function Button() {
-    return <button type="button">{label}</button>
-  }
-
   const toolbarPlugin = (params) => ({ __kind: 'toolbar', ...params })
   const plugin = (name) => () => ({ __kind: name })
   const imagePlugin = (params) => ({ __kind: 'image', ...params })
   const signal = Symbol('signal')
-  const ButtonWithTooltip = ({ children, ...props }) => (
-    <button type="button" {...props}>
-      {children}
-    </button>
-  )
 
   const MDXEditor = forwardRef(function MockMDXEditor({ markdown, onChange, plugins }, ref) {
     const [value, setValue] = useState(markdown)
@@ -64,7 +55,6 @@ vi.mock('@mdxeditor/editor', async () => {
 
   return {
     MDXEditor,
-    ButtonWithTooltip,
     lexicalTheme: {
       text: {
         code: 'mock-inline-code',
@@ -107,15 +97,6 @@ vi.mock('@mdxeditor/editor', async () => {
     updateLink$: signal,
     cancelLinkEdit$: signal,
     showLinkTitleField$: signal,
-    UndoRedo: makeButton('UndoRedo'),
-    BoldItalicUnderlineToggles: makeButton('BoldItalicUnderlineToggles'),
-    CodeToggle: makeButton('CodeToggle'),
-    BlockTypeSelect: makeButton('BlockTypeSelect'),
-    ListsToggle: makeButton('ListsToggle'),
-    CreateLink: makeButton('CreateLink'),
-    InsertImage: makeButton('InsertImage'),
-    InsertTable: makeButton('InsertTable'),
-    InsertCodeBlock: makeButton('InsertCodeBlock'),
   }
 })
 
