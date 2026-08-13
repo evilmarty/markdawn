@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  BlockTypeSelect,
+  applyBlockType$,
+  applyListType$,
   BoldItalicUnderlineToggles,
   ButtonWithTooltip,
   cancelLinkEdit$,
@@ -21,8 +22,9 @@ import {
   linkDialogPlugin,
   linkPlugin,
   listsPlugin,
-  ListsToggle,
   markdownShortcutPlugin,
+  currentBlockType$,
+  currentListType$,
   lexicalTheme as mdxLexicalTheme,
   MDXEditor,
   quotePlugin,
@@ -102,6 +104,59 @@ function FrontmatterToolbarButton({ hasFrontmatter, onClick }) {
         <path d="M14.5 14.75V13.25H18.5V14.75H14.5Z" fill="currentColor" />
       </svg>
     </ButtonWithTooltip>
+  )
+}
+
+function BlockTypeWithListsSelect() {
+  const currentBlockType = useCellValue(currentBlockType$)
+  const currentListType = useCellValue(currentListType$)
+  const applyBlockType = usePublisher(applyBlockType$)
+  const applyListType = usePublisher(applyListType$)
+
+  const selectedValue =
+    currentListType === 'bullet' || currentListType === 'number'
+      ? `list-${currentListType}`
+      : currentBlockType === 'quote' ||
+          currentBlockType === 'paragraph' ||
+          currentBlockType === 'h1' ||
+          currentBlockType === 'h2' ||
+          currentBlockType === 'h3' ||
+          currentBlockType === 'h4' ||
+          currentBlockType === 'h5' ||
+          currentBlockType === 'h6'
+        ? currentBlockType
+        : 'paragraph'
+
+  return (
+    <select
+      className="select select-bordered select-xs min-w-36"
+      aria-label="Block type"
+      value={selectedValue}
+      onChange={(event) => {
+        const nextValue = event.target.value
+        if (nextValue === 'list-bullet') {
+          applyListType('bullet')
+          return
+        }
+        if (nextValue === 'list-number') {
+          applyListType('number')
+          return
+        }
+        applyListType('')
+        applyBlockType(nextValue)
+      }}
+    >
+      <option value="paragraph">Paragraph</option>
+      <option value="h1">Heading 1</option>
+      <option value="h2">Heading 2</option>
+      <option value="h3">Heading 3</option>
+      <option value="h4">Heading 4</option>
+      <option value="h5">Heading 5</option>
+      <option value="h6">Heading 6</option>
+      <option value="quote">Quote</option>
+      <option value="list-bullet">Bulleted list</option>
+      <option value="list-number">Numbered list</option>
+    </select>
   )
 }
 
@@ -415,7 +470,6 @@ function EditorWorkspace({
             </button>
             <UndoRedo />
             <BoldItalicUnderlineToggles />
-            <ListsToggle />
             <div className="dropdown dropdown-end lg:hidden">
               <button className="btn btn-xs btn-square" type="button" tabIndex={0} aria-label="More actions">
                 <svg className="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
@@ -430,7 +484,7 @@ function EditorWorkspace({
               >
                 <div className="flex flex-wrap gap-1">
                   <CodeToggle />
-                  <BlockTypeSelect />
+                  <BlockTypeWithListsSelect />
                   <CreateLink />
                   <InsertImage />
                   <InsertTable />
@@ -446,7 +500,7 @@ function EditorWorkspace({
             </div>
             <div className="hidden items-center gap-1 lg:flex">
               <CodeToggle />
-              <BlockTypeSelect />
+              <BlockTypeWithListsSelect />
               <CreateLink />
               <InsertImage />
               <InsertTable />
