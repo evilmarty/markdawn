@@ -110,7 +110,7 @@ function renderWorkspace(overrides = {}) {
     onToggleMobileSidebar: vi.fn(),
     onToggleDesktopSidebar: vi.fn(),
     onOpenFrontmatterDialog: vi.fn(),
-    saveButtonClass: 'btn btn-xs btn-primary btn-outline',
+    saveButtonClass: 'btn btn-xs btn-primary btn-soft',
     supportsSaveFilePicker: true,
     imageUploadHandler: vi.fn(async () => 'data:image/png;base64,Zm9v'),
     ...overrides,

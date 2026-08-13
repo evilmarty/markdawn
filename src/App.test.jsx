@@ -243,13 +243,13 @@ describe('App', () => {
     render(<App />)
 
     const saveButton = await screen.findByRole('button', { name: 'Save' })
-    expect(saveButton).toHaveClass('btn-outline')
+    expect(saveButton).toHaveClass('btn-soft')
 
     await user.click(firstButton('Mock Edit'))
-    expect(saveButton).not.toHaveClass('btn-outline')
+    expect(saveButton).not.toHaveClass('btn-soft')
 
     await user.click(saveButton)
-    expect(saveButton).toHaveClass('btn-outline')
+    expect(saveButton).toHaveClass('btn-soft')
   })
 
   it('does not confirm when closing a fresh new tab', async () => {
@@ -301,7 +301,7 @@ describe('App', () => {
     expect(write).toHaveBeenCalled()
     expect(close).toHaveBeenCalled()
     expect(screen.getAllByRole('button', { name: 'renamed.md' })[0]).toBeInTheDocument()
-    expect(firstButton('Save')).toHaveClass('btn-outline')
+    expect(firstButton('Save')).toHaveClass('btn-soft')
   })
 
   it('opens sidebar overlay from hamburger on small layout controls', async () => {
@@ -334,9 +334,9 @@ describe('App', () => {
     render(<App />)
 
     const saveButton = firstButton('Save')
-    expect(saveButton).toHaveClass('btn-outline')
+    expect(saveButton).toHaveClass('btn-soft')
     await user.click(firstButton('Mock Normalize'))
-    expect(saveButton).toHaveClass('btn-outline')
+    expect(saveButton).toHaveClass('btn-soft')
   })
 
   it('handles file picker save-as and open file error paths', async () => {
@@ -469,26 +469,26 @@ describe('App', () => {
     render(<App />)
     expect(screen.getByRole('combobox', { name: 'Theme' })).toHaveValue('system')
     expect(sessionStorage.getItem('markdawn.theme')).toBe('system')
-    expect(document.body).not.toHaveAttribute('data-theme')
+    expect(document.documentElement).not.toHaveAttribute('data-theme')
   })
 
-  it('removes body data-theme when switching to system', async () => {
+  it('removes html data-theme when switching to system', async () => {
     const user = userEvent.setup()
     render(<App />)
     const themeSelect = screen.getByRole('combobox', { name: 'Theme' })
 
     await user.selectOptions(themeSelect, 'dracula')
-    expect(document.body).toHaveAttribute('data-theme', 'dracula')
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dracula')
 
     await user.selectOptions(themeSelect, 'system')
-    expect(document.body).not.toHaveAttribute('data-theme')
+    expect(document.documentElement).not.toHaveAttribute('data-theme')
   })
 
   it('flushes pending autosave on pagehide before debounce timer', async () => {
     render(<App />)
 
     fireEvent.click(firstButton('Mock Edit'))
-    expect(firstButton('Save')).not.toHaveClass('btn-outline')
+    expect(firstButton('Save')).not.toHaveClass('btn-soft')
     const draftBeforePagehide = sessionStorage.getItem('markdawn.session.v1')
     expect(draftBeforePagehide).toBeNull()
 
@@ -500,7 +500,7 @@ describe('App', () => {
   it('writes autosave after debounce window without explicit flush', async () => {
     render(<App />)
     fireEvent.click(firstButton('Mock Edit'))
-    expect(firstButton('Save')).not.toHaveClass('btn-outline')
+    expect(firstButton('Save')).not.toHaveClass('btn-soft')
     expect(sessionStorage.getItem('markdawn.session.v1')).toBeNull()
     await new Promise((resolve) => setTimeout(resolve, 400))
     expect(sessionStorage.getItem('markdawn.session.v1')).toContain('edit')
@@ -522,7 +522,7 @@ describe('App', () => {
     await user.click(saveButtons[saveButtons.length - 1])
 
     expect(screen.queryByText('Edit front matter')).not.toBeInTheDocument()
-    expect(firstButton('Save')).not.toHaveClass('btn-outline')
+    expect(firstButton('Save')).not.toHaveClass('btn-soft')
   })
 })
 

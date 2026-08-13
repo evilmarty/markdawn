@@ -176,15 +176,15 @@ function App() {
       setStatusMessage(`Theme preference not saved: ${error?.message ?? 'storage unavailable'}`)
     }
     if (theme === 'system') {
-      document.body.removeAttribute('data-theme')
+      document.documentElement.removeAttribute('data-theme')
       return () => {
-        document.body.removeAttribute('data-theme')
+        document.documentElement.removeAttribute('data-theme')
       }
     }
 
-    document.body.setAttribute('data-theme', theme)
+    document.documentElement.setAttribute('data-theme', theme)
     return () => {
-      document.body.removeAttribute('data-theme')
+      document.documentElement.removeAttribute('data-theme')
     }
   }, [theme])
 
@@ -438,7 +438,7 @@ function App() {
     setStatusMessage('Updated front matter.')
   }, [activeTab, currentActiveTabId, frontmatterRows, persistTabsToSession])
 
-  const saveButtonClass = activeTab?.isDirty ? 'btn btn-xs btn-primary' : 'btn btn-xs btn-primary btn-outline'
+  const saveButtonClass = activeTab?.isDirty ? 'btn btn-xs btn-primary' : 'btn btn-xs btn-primary btn-soft'
 
   return (
     <main className="flex min-h-screen w-full bg-base-200">
