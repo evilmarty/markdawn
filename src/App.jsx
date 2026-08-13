@@ -11,13 +11,19 @@ import {
 import { useSessionDraftPersistence } from './hooks/useSessionDraftPersistence'
 
 const EditorWorkspace = lazy(() => import('./EditorWorkspace'))
-const INLINE_LOGO_SVG = logoSvg
+const STRIPPED_LOGO_SVG = logoSvg
   .replace(/<\?xml[\s\S]*?\?>\s*/i, '')
   .replace(/<!DOCTYPE[\s\S]*?>\s*/i, '')
+const INLINE_LOGO_SVG = STRIPPED_LOGO_SVG
   .replace(
     /<svg\b([^>]*)>/i,
     '<svg$1 class="h-8 w-14 fill-current text-base" role="img" aria-label="Markdawn">',
   )
+const DEFAULT_LOGO_DATA_URL = `data:image/svg+xml;utf8,${encodeURIComponent(
+  STRIPPED_LOGO_SVG
+    .replace(/\bwidth="100%"/i, 'width="336"')
+    .replace(/\bheight="100%"/i, 'height="192"'),
+)}`
 
 const SESSION_STORAGE_KEY = 'markdawn.session.v1'
 const SESSION_THEME_KEY = 'markdawn.theme'
@@ -46,7 +52,9 @@ const DAISY_THEMES = [
   'luxury',
   'dracula',
 ]
-const DEFAULT_MARKDOWN = `# Markdawn
+const DEFAULT_MARKDOWN = `![Markdawn logo](${DEFAULT_LOGO_DATA_URL})
+
+# Markdawn
 
 Welcome to Markdawn, your editable Markdown preview.
 
@@ -55,7 +63,9 @@ Welcome to Markdawn, your editable Markdown preview.
 - **Preview is the editor**: edit rendered content directly.
 - **Session recovery**: your draft is saved in this tab session.
 - **File support**: open and save Markdown files locally.
-- **Images as data URLs**: inserted images are embedded in the document.
+- **Image support**: add and edit images directly in your document.
+- **Table support**: insert and edit Markdown tables from the toolbar.
+- **Front matter support**: manage document metadata without leaving the editor.
 
 > Tip: use the toolbar above to insert rich content quickly.
 `
