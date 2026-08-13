@@ -1,67 +1,25 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import {
-  activeEditor$,
-  applyBlockType$,
-  applyFormat$,
-  applyListType$,
-  cancelLinkEdit$,
-  closeImageDialog$,
   codeBlockPlugin,
   codeMirrorPlugin,
-  currentFormat$,
-  DEFAULT_FORMAT,
-  imageDialogState$,
-  insertCodeBlock$,
-  insertTable$,
-  IS_BOLD,
-  IS_CODE,
-  IS_ITALIC,
-  IS_UNDERLINE,
-  linkDialogState$,
-  openLinkEditDialog$,
-  openEditImageDialog$,
-  openNewImageDialog$,
-  headingsPlugin,
   frontmatterPlugin,
+  headingsPlugin,
   imagePlugin,
+  lexicalTheme as mdxLexicalTheme,
   linkDialogPlugin,
   linkPlugin,
   listsPlugin,
   markdownShortcutPlugin,
-  currentBlockType$,
-  currentListType$,
-  lexicalTheme as mdxLexicalTheme,
   MDXEditor,
   quotePlugin,
-  saveImage$,
-  showLinkTitleField$,
   tablePlugin,
   thematicBreakPlugin,
   toolbarPlugin,
-  updateLink$,
 } from '@mdxeditor/editor'
-import { useCellValue, usePublisher } from '@mdxeditor/gurx'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $getNodeByKey, REDO_COMMAND, UNDO_COMMAND } from 'lexical'
-import {
-  Bold,
-  Code,
-  Ellipsis,
-  ImagePlus,
-  Italic,
-  Link2,
-  ListTree,
-  Menu,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Pencil,
-  Redo2,
-  SquareCode,
-  Table2,
-  Undo2,
-  Underline,
-  X,
-} from 'lucide-react'
+import DaisyImageDialog from './editor/dialogs/DaisyImageDialog'
+import DaisyLinkDialog from './editor/dialogs/DaisyLinkDialog'
+import DaisyEditImageToolbar from './editor/image/DaisyEditImageToolbar'
+import EditorToolbar from './editor/Toolbar'
 
 const CODE_BLOCK_LANGUAGES = {
   txt: 'Plain text',
@@ -105,408 +63,6 @@ const editorLexicalTheme = {
   },
 }
 
-function normalizeDimension(value) {
-  return typeof value === 'number' ? value : ''
-}
-
-function parseDimension(value) {
-  if (!value) return undefined
-  const parsed = Number.parseInt(value, 10)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
-}
-
-function FrontmatterToolbarButton({ hasFrontmatter, onClick }) {
-  return (
-    <button
-      className="btn btn-xs btn-ghost"
-      type="button"
-      aria-label={hasFrontmatter ? 'Edit frontmatter' : 'Insert frontmatter'}
-      title={hasFrontmatter ? 'Edit frontmatter' : 'Insert frontmatter'}
-      onClick={onClick}
-    >
-      <ListTree className="h-4 w-4" aria-hidden="true" />
-    </button>
-  )
-}
-
-function ToolbarActionButton({ title, active = false, onClick, children }) {
-  return (
-    <button className={`btn btn-xs btn-ghost${active ? ' btn-active' : ''}`} type="button" aria-label={title} title={title} onClick={onClick}>
-      {children}
-    </button>
-  )
-}
-
-function UndoRedoButtons() {
-  const activeEditor = useCellValue(activeEditor$)
-
-  return (
-    <div className="flex items-center gap-1">
-      <ToolbarActionButton title="Undo" onClick={() => activeEditor?.dispatchCommand(UNDO_COMMAND, undefined)}>
-        <Undo2 className="h-3.5 w-3.5" aria-hidden="true" />
-      </ToolbarActionButton>
-      <ToolbarActionButton title="Redo" onClick={() => activeEditor?.dispatchCommand(REDO_COMMAND, undefined)}>
-        <Redo2 className="h-3.5 w-3.5" aria-hidden="true" />
-      </ToolbarActionButton>
-    </div>
-  )
-}
-
-function InlineFormatButtons() {
-  const currentFormat = useCellValue(currentFormat$) ?? DEFAULT_FORMAT
-  const applyFormat = usePublisher(applyFormat$)
-
-  return (
-    <div className="flex items-center gap-1">
-      <ToolbarActionButton title="Bold" active={(currentFormat & IS_BOLD) !== 0} onClick={() => applyFormat('bold')}>
-        <Bold className="h-3.5 w-3.5" aria-hidden="true" />
-      </ToolbarActionButton>
-      <ToolbarActionButton title="Italic" active={(currentFormat & IS_ITALIC) !== 0} onClick={() => applyFormat('italic')}>
-        <Italic className="h-3.5 w-3.5" aria-hidden="true" />
-      </ToolbarActionButton>
-      <ToolbarActionButton title="Underline" active={(currentFormat & IS_UNDERLINE) !== 0} onClick={() => applyFormat('underline')}>
-        <Underline className="h-3.5 w-3.5" aria-hidden="true" />
-      </ToolbarActionButton>
-      <ToolbarActionButton title="Inline code" active={(currentFormat & IS_CODE) !== 0} onClick={() => applyFormat('code')}>
-        <Code className="h-3.5 w-3.5" aria-hidden="true" />
-      </ToolbarActionButton>
-    </div>
-  )
-}
-
-function InsertButtons() {
-  const openLinkEditDialog = usePublisher(openLinkEditDialog$)
-  const openNewImageDialog = usePublisher(openNewImageDialog$)
-  const insertTable = usePublisher(insertTable$)
-  const insertCodeBlock = usePublisher(insertCodeBlock$)
-
-  return (
-    <>
-      <ToolbarActionButton title="Insert link" onClick={() => openLinkEditDialog()}>
-        <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
-      </ToolbarActionButton>
-      <ToolbarActionButton title="Insert image" onClick={() => openNewImageDialog()}>
-        <ImagePlus className="h-3.5 w-3.5" aria-hidden="true" />
-      </ToolbarActionButton>
-      <ToolbarActionButton title="Insert table" onClick={() => insertTable({ rows: 3, columns: 3 })}>
-        <Table2 className="h-3.5 w-3.5" aria-hidden="true" />
-      </ToolbarActionButton>
-      <ToolbarActionButton title="Insert code block" onClick={() => insertCodeBlock({ language: 'txt' })}>
-        <SquareCode className="h-3.5 w-3.5" aria-hidden="true" />
-      </ToolbarActionButton>
-    </>
-  )
-}
-
-function BlockTypeWithListsSelect() {
-  const currentBlockType = useCellValue(currentBlockType$)
-  const currentListType = useCellValue(currentListType$)
-  const applyBlockType = usePublisher(applyBlockType$)
-  const applyListType = usePublisher(applyListType$)
-
-  const selectedValue =
-    currentListType === 'bullet' || currentListType === 'number'
-      ? `list-${currentListType}`
-      : currentBlockType === 'quote' ||
-          currentBlockType === 'paragraph' ||
-          currentBlockType === 'h1' ||
-          currentBlockType === 'h2' ||
-          currentBlockType === 'h3' ||
-          currentBlockType === 'h4' ||
-          currentBlockType === 'h5' ||
-          currentBlockType === 'h6'
-        ? currentBlockType
-        : 'paragraph'
-
-  return (
-    <select
-      className="select select-bordered select-xs min-w-36"
-      aria-label="Block type"
-      value={selectedValue}
-      onChange={(event) => {
-        const nextValue = event.target.value
-        if (nextValue === 'list-bullet') {
-          applyListType('bullet')
-          return
-        }
-        if (nextValue === 'list-number') {
-          applyListType('number')
-          return
-        }
-        applyListType('')
-        applyBlockType(nextValue)
-      }}
-    >
-      <option value="paragraph">Paragraph</option>
-      <option value="h1">Heading 1</option>
-      <option value="h2">Heading 2</option>
-      <option value="h3">Heading 3</option>
-      <option value="h4">Heading 4</option>
-      <option value="h5">Heading 5</option>
-      <option value="h6">Heading 6</option>
-      <option value="quote">Quote</option>
-      <option value="list-bullet">Bulleted list</option>
-      <option value="list-number">Numbered list</option>
-    </select>
-  )
-}
-
-function DaisyLinkDialog() {
-  const linkDialogState = useCellValue(linkDialogState$)
-  const showLinkTitleField = useCellValue(showLinkTitleField$)
-  const updateLink = usePublisher(updateLink$)
-  const cancelLinkEdit = usePublisher(cancelLinkEdit$)
-  const [url, setUrl] = useState('')
-  const [text, setText] = useState('')
-  const [title, setTitle] = useState('')
-
-  useEffect(() => {
-    if (linkDialogState.type !== 'edit') return
-    setUrl(linkDialogState.url ?? '')
-    setText(linkDialogState.text ?? '')
-    setTitle(linkDialogState.title ?? '')
-  }, [linkDialogState])
-
-  if (linkDialogState.type !== 'edit') return null
-
-  return (
-    <div className="modal modal-open z-[70]">
-      <form
-        className="modal-box w-full max-w-2xl"
-        onSubmit={(event) => {
-          event.preventDefault()
-          updateLink({
-            url: url.trim() || undefined,
-            text: linkDialogState.withAnchorText ? text.trim() || undefined : undefined,
-            title: showLinkTitleField ? title.trim() || undefined : undefined,
-          })
-        }}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') {
-            event.preventDefault()
-            cancelLinkEdit()
-          }
-        }}
-      >
-        <h3 className="mb-3 text-lg font-semibold">Edit link</h3>
-
-        <div className="grid gap-3">
-          <label className="form-control">
-            <span className="label-text mb-1 text-sm">URL</span>
-            <input
-              className="input input-bordered w-full"
-              type="url"
-              placeholder="https://example.com"
-              value={url}
-              onChange={(event) => setUrl(event.target.value)}
-              autoFocus
-            />
-          </label>
-
-          {linkDialogState.withAnchorText && (
-            <label className="form-control">
-              <span className="label-text mb-1 text-sm">Anchor text</span>
-              <input
-                className="input input-bordered w-full"
-                value={text}
-                onChange={(event) => setText(event.target.value)}
-              />
-            </label>
-          )}
-
-          {showLinkTitleField && (
-            <label className="form-control">
-              <span className="label-text mb-1 text-sm">Link title</span>
-              <input
-                className="input input-bordered w-full"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-              />
-            </label>
-          )}
-        </div>
-
-        <div className="modal-action mt-4">
-          <button className="btn" type="button" onClick={() => cancelLinkEdit()}>
-            Cancel
-          </button>
-          <button className="btn btn-primary" type="submit">
-            Save
-          </button>
-        </div>
-      </form>
-      <button className="modal-backdrop" type="button" onClick={() => cancelLinkEdit()}>
-        Close
-      </button>
-    </div>
-  )
-}
-
-function DaisyImageDialog() {
-  const imageDialogState = useCellValue(imageDialogState$)
-  const closeImageDialog = usePublisher(closeImageDialog$)
-  const saveImage = usePublisher(saveImage$)
-  const isOpen = imageDialogState.type !== 'inactive'
-
-  const [src, setSrc] = useState('')
-  const [altText, setAltText] = useState('')
-  const [title, setTitle] = useState('')
-  const [width, setWidth] = useState('')
-  const [height, setHeight] = useState('')
-  const [fileList, setFileList] = useState(null)
-
-  useEffect(() => {
-    if (imageDialogState.type === 'editing') {
-      const initial = imageDialogState.initialValues
-      setSrc(initial.src ?? '')
-      setAltText(initial.altText ?? '')
-      setTitle(initial.title ?? '')
-      setWidth(String(normalizeDimension(initial.width)))
-      setHeight(String(normalizeDimension(initial.height)))
-      setFileList(null)
-      return
-    }
-
-    if (imageDialogState.type === 'new') {
-      setSrc('')
-      setAltText('')
-      setTitle('')
-      setWidth('')
-      setHeight('')
-      setFileList(null)
-    }
-  }, [imageDialogState])
-
-  if (!isOpen) return null
-
-  return (
-    <div className="modal modal-open z-[60]">
-      <form
-        className="modal-box w-full max-w-2xl"
-        onSubmit={(event) => {
-          event.preventDefault()
-          const payload = {
-            src: src.trim() || undefined,
-            altText: altText.trim() || undefined,
-            title: title.trim() || undefined,
-            width: parseDimension(width),
-            height: parseDimension(height),
-          }
-          if (fileList && fileList.length > 0) payload.file = fileList
-          saveImage(payload)
-          closeImageDialog()
-        }}
-      >
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-lg font-semibold">
-            {imageDialogState.type === 'editing' ? 'Edit image' : 'Insert image'}
-          </h3>
-          <button className="btn btn-sm btn-circle btn-ghost" type="button" onClick={() => closeImageDialog()}>
-            <X className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
-        </div>
-
-        <div className="grid gap-3">
-          <label className="form-control">
-            <span className="label-text mb-1 text-sm">Upload from device</span>
-            <input
-              className="file-input file-input-bordered w-full"
-              type="file"
-              accept="image/*"
-              onChange={(event) => setFileList(event.target.files)}
-            />
-          </label>
-
-          <label className="form-control">
-            <span className="label-text mb-1 text-sm">Image URL or data URL</span>
-            <input
-              className="input input-bordered w-full font-mono text-sm"
-              value={src}
-              onChange={(event) => setSrc(event.target.value)}
-            />
-          </label>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <label className="form-control">
-              <span className="label-text mb-1 text-sm">Alt text</span>
-              <input
-                className="input input-bordered w-full"
-                value={altText}
-                onChange={(event) => setAltText(event.target.value)}
-              />
-            </label>
-            <label className="form-control">
-              <span className="label-text mb-1 text-sm">Title</span>
-              <input
-                className="input input-bordered w-full"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-              />
-            </label>
-          </div>
-        </div>
-
-        <div className="modal-action mt-4">
-          <button className="btn" type="button" onClick={() => closeImageDialog()}>
-            Cancel
-          </button>
-          <button className="btn btn-primary" type="submit">
-            Save
-          </button>
-        </div>
-      </form>
-      <button className="modal-backdrop" type="button" onClick={() => closeImageDialog()}>
-        Close
-      </button>
-    </div>
-  )
-}
-
-function DaisyEditImageToolbar({ nodeKey, imageSource, initialImagePath, title, alt, width, height }) {
-  const openEditImageDialog = usePublisher(openEditImageDialog$)
-  const [editor] = useLexicalComposerContext()
-
-  return (
-    <ul className="mdx-image-edit-toolbar menu menu-xs menu-horizontal absolute right-2 top-2 z-10 rounded-box border border-base-300 bg-base-100/90 p-1 shadow backdrop-blur-sm">
-      <li className="!my-0 pl-0">
-        <button
-          type="button"
-          aria-label="Edit image"
-          title="Edit image"
-          onClick={() => {
-            openEditImageDialog({
-              nodeKey,
-              initialValues: {
-                src: initialImagePath ?? imageSource,
-                title,
-                altText: alt,
-                width: typeof width === 'number' ? width : undefined,
-                height: typeof height === 'number' ? height : undefined,
-              },
-            })
-          }}
-        >
-          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-        </button>
-      </li>
-      <li className="!my-0">
-        <button
-          type="button"
-          aria-label="Remove image"
-          title="Remove image"
-          onClick={() => {
-            editor.update(() => {
-              $getNodeByKey(nodeKey)?.remove()
-            })
-          }}
-        >
-          <X className="h-3.5 w-3.5" aria-hidden="true" />
-        </button>
-      </li>
-    </ul>
-  )
-}
-
 function EditorWorkspace({
   activeTab,
   editorRef,
@@ -526,64 +82,17 @@ function EditorWorkspace({
     () => [
       toolbarPlugin({
         toolbarContents: () => (
-          <>
-            <button
-              className="btn btn-xs btn-ghost lg:hidden"
-              type="button"
-              aria-label={mobileSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
-              onClick={onToggleMobileSidebar}
-            >
-              <Menu className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
-            <button
-              className="btn btn-xs btn-ghost hidden lg:inline-flex"
-              type="button"
-              aria-label={desktopSidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-              onClick={onToggleDesktopSidebar}
-            >
-              {desktopSidebarOpen ? (
-                <PanelLeftClose className="h-3.5 w-3.5" aria-hidden="true" />
-              ) : (
-                <PanelLeftOpen className="h-3.5 w-3.5" aria-hidden="true" />
-              )}
-            </button>
-            <UndoRedoButtons />
-            <InlineFormatButtons />
-            <div className="dropdown dropdown-end lg:hidden">
-              <button className="btn btn-xs btn-square" type="button" tabIndex={0} aria-label="More actions">
-                <Ellipsis className="h-4 w-4" aria-hidden="true" />
-              </button>
-              <div
-                tabIndex={0}
-                className="dropdown-content menu z-50 mt-1 w-56 rounded-box border border-base-300 bg-base-100 p-2 shadow"
-              >
-                <div className="flex flex-wrap gap-1">
-                  <BlockTypeWithListsSelect />
-                  <InsertButtons />
-                  <FrontmatterToolbarButton hasFrontmatter={hasFrontmatter} onClick={onOpenFrontmatterDialog} />
-                  {supportsSaveFilePicker && (
-                    <button className="btn btn-xs" type="button" onClick={() => void onSaveFile({ saveAs: true })}>
-                      Save As
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="hidden items-center gap-1 lg:flex">
-              <BlockTypeWithListsSelect />
-              <InsertButtons />
-              <FrontmatterToolbarButton hasFrontmatter={hasFrontmatter} onClick={onOpenFrontmatterDialog} />
-            </div>
-            <div className="grow" />
-            {supportsSaveFilePicker && (
-              <button className="btn btn-xs hidden lg:inline-flex" type="button" onClick={() => void onSaveFile({ saveAs: true })}>
-                Save As
-              </button>
-            )}
-            <button className={`${saveButtonClass} mr-2`} type="button" onClick={() => void onSaveFile()}>
-              Save
-            </button>
-          </>
+          <EditorToolbar
+            hasFrontmatter={hasFrontmatter}
+            mobileSidebarOpen={mobileSidebarOpen}
+            desktopSidebarOpen={desktopSidebarOpen}
+            onSaveFile={onSaveFile}
+            onToggleMobileSidebar={onToggleMobileSidebar}
+            onToggleDesktopSidebar={onToggleDesktopSidebar}
+            onOpenFrontmatterDialog={onOpenFrontmatterDialog}
+            saveButtonClass={saveButtonClass}
+            supportsSaveFilePicker={supportsSaveFilePicker}
+          />
         ),
       }),
       headingsPlugin(),
@@ -605,15 +114,15 @@ function EditorWorkspace({
     ],
     [
       hasFrontmatter,
-      imageUploadHandler,
-      desktopSidebarOpen,
       mobileSidebarOpen,
-      onOpenFrontmatterDialog,
+      desktopSidebarOpen,
       onSaveFile,
-      onToggleDesktopSidebar,
       onToggleMobileSidebar,
+      onToggleDesktopSidebar,
+      onOpenFrontmatterDialog,
       saveButtonClass,
       supportsSaveFilePicker,
+      imageUploadHandler,
     ],
   )
 
