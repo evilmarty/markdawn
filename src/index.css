@@ -311,6 +311,11 @@ body {
   margin-bottom: 0;
 }
 
+/* Keep image edit toolbar anchored at the true top-right without prose list margins. */
+.mdxeditor .prose ul.mdx-image-edit-toolbar {
+  margin: 0;
+}
+
 /* Keep MDXEditor image resize handles aligned while protruding slightly. */
 .mdxeditor [class*='_imageResizer_'][class*='_imageResizerN_'] {
   top: -4px;

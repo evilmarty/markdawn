@@ -329,7 +329,7 @@ function DaisyEditImageToolbar({ nodeKey, imageSource, initialImagePath, title, 
   const [editor] = useLexicalComposerContext()
 
   return (
-    <ul className="menu menu-xs menu-horizontal absolute right-2 top-2 z-10 rounded-box border border-base-300 bg-base-100/90 p-1 shadow backdrop-blur-sm">
+    <ul className="mdx-image-edit-toolbar menu menu-xs menu-horizontal absolute right-2 top-2 z-10 rounded-box border border-base-300 bg-base-100/90 p-1 shadow backdrop-blur-sm">
       <li className="!my-0 pl-0">
         <button
           type="button"

@@ -56,7 +56,7 @@ function FrontmatterDialog({ open, rows, setRows, onCancel, onSave }) {
         </div>
         <div className="mt-4 flex items-center justify-between gap-2">
           <button
-            className="btn btn-ghost btn-sm"
+            className="btn btn-ghost"
             type="button"
             onClick={() => setRows((prevRows) => [...prevRows, makeFrontmatterRow()])}
           >
