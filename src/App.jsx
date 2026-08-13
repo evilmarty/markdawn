@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { FolderOpen, Plus, X } from 'lucide-react'
 import FrontmatterDialog from './components/FrontmatterDialog'
 import logoSvg from './assets/logo.svg?raw'
 import {
@@ -472,21 +473,11 @@ function App() {
         />
         <div className="mb-3 flex gap-2">
           <button className="btn btn-sm flex-1" type="button" onClick={handleNewTab}>
-            <svg className="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
-              <path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
+            <Plus className="h-4 w-4" aria-hidden="true" />
             New
           </button>
           <button className="btn btn-sm flex-1" type="button" onClick={handleOpenFile}>
-            <svg className="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
-              <path
-                d="M2.5 4.5h3l1.25 1.5h6.75v6.5h-11z"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <FolderOpen className="h-4 w-4" aria-hidden="true" />
             Open
           </button>
         </div>
@@ -513,15 +504,7 @@ function App() {
                       aria-label={`Close ${tab.fileName}`}
                       onClick={() => handleCloseTab(tab.id)}
                     >
-                      <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" aria-hidden="true">
-                        <path
-                          d="M4 4l8 8M12 4l-8 8"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                        />
-                      </svg>
+                      <X className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>
                   </div>
                 </li>

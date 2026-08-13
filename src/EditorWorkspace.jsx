@@ -1,24 +1,29 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  activeEditor$,
   applyBlockType$,
+  applyFormat$,
   applyListType$,
-  BoldItalicUnderlineToggles,
-  ButtonWithTooltip,
   cancelLinkEdit$,
   closeImageDialog$,
   codeBlockPlugin,
   codeMirrorPlugin,
-  CodeToggle,
-  CreateLink,
+  currentFormat$,
+  DEFAULT_FORMAT,
   imageDialogState$,
+  insertCodeBlock$,
+  insertTable$,
+  IS_BOLD,
+  IS_CODE,
+  IS_ITALIC,
+  IS_UNDERLINE,
   linkDialogState$,
+  openLinkEditDialog$,
   openEditImageDialog$,
+  openNewImageDialog$,
   headingsPlugin,
   frontmatterPlugin,
   imagePlugin,
-  InsertCodeBlock,
-  InsertImage,
-  InsertTable,
   linkDialogPlugin,
   linkPlugin,
   listsPlugin,
@@ -33,12 +38,30 @@ import {
   tablePlugin,
   thematicBreakPlugin,
   toolbarPlugin,
-  UndoRedo,
   updateLink$,
 } from '@mdxeditor/editor'
 import { useCellValue, usePublisher } from '@mdxeditor/gurx'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $getNodeByKey } from 'lexical'
+import { $getNodeByKey, REDO_COMMAND, UNDO_COMMAND } from 'lexical'
+import {
+  Bold,
+  Code,
+  Ellipsis,
+  ImagePlus,
+  Italic,
+  Link2,
+  ListTree,
+  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Pencil,
+  Redo2,
+  SquareCode,
+  Table2,
+  Undo2,
+  Underline,
+  X,
+} from 'lucide-react'
 
 const CODE_BLOCK_LANGUAGES = {
   txt: 'Plain text',
@@ -94,16 +117,84 @@ function parseDimension(value) {
 
 function FrontmatterToolbarButton({ hasFrontmatter, onClick }) {
   return (
-    <ButtonWithTooltip title={hasFrontmatter ? 'Edit frontmatter' : 'Insert frontmatter'} onClick={onClick}>
-      <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M4.5 8.75V7.25H8.5V8.75H4.5Z" fill="currentColor" />
-        <path d="M4.5 14.75V13.25H8.5V14.75H4.5Z" fill="currentColor" />
-        <path d="M9.5 8.75V7.25H13.5V8.75H9.5Z" fill="currentColor" />
-        <path d="M9.5 14.75V13.25H13.5V14.75H9.5Z" fill="currentColor" />
-        <path d="M14.5 8.75V7.25H18.5V8.75H14.5Z" fill="currentColor" />
-        <path d="M14.5 14.75V13.25H18.5V14.75H14.5Z" fill="currentColor" />
-      </svg>
-    </ButtonWithTooltip>
+    <button
+      className="btn btn-xs btn-ghost"
+      type="button"
+      aria-label={hasFrontmatter ? 'Edit frontmatter' : 'Insert frontmatter'}
+      title={hasFrontmatter ? 'Edit frontmatter' : 'Insert frontmatter'}
+      onClick={onClick}
+    >
+      <ListTree className="h-4 w-4" aria-hidden="true" />
+    </button>
+  )
+}
+
+function ToolbarActionButton({ title, active = false, onClick, children }) {
+  return (
+    <button className={`btn btn-xs btn-ghost${active ? ' btn-active' : ''}`} type="button" aria-label={title} title={title} onClick={onClick}>
+      {children}
+    </button>
+  )
+}
+
+function UndoRedoButtons() {
+  const activeEditor = useCellValue(activeEditor$)
+
+  return (
+    <div className="flex items-center gap-1">
+      <ToolbarActionButton title="Undo" onClick={() => activeEditor?.dispatchCommand(UNDO_COMMAND, undefined)}>
+        <Undo2 className="h-3.5 w-3.5" aria-hidden="true" />
+      </ToolbarActionButton>
+      <ToolbarActionButton title="Redo" onClick={() => activeEditor?.dispatchCommand(REDO_COMMAND, undefined)}>
+        <Redo2 className="h-3.5 w-3.5" aria-hidden="true" />
+      </ToolbarActionButton>
+    </div>
+  )
+}
+
+function InlineFormatButtons() {
+  const currentFormat = useCellValue(currentFormat$) ?? DEFAULT_FORMAT
+  const applyFormat = usePublisher(applyFormat$)
+
+  return (
+    <div className="flex items-center gap-1">
+      <ToolbarActionButton title="Bold" active={(currentFormat & IS_BOLD) !== 0} onClick={() => applyFormat('bold')}>
+        <Bold className="h-3.5 w-3.5" aria-hidden="true" />
+      </ToolbarActionButton>
+      <ToolbarActionButton title="Italic" active={(currentFormat & IS_ITALIC) !== 0} onClick={() => applyFormat('italic')}>
+        <Italic className="h-3.5 w-3.5" aria-hidden="true" />
+      </ToolbarActionButton>
+      <ToolbarActionButton title="Underline" active={(currentFormat & IS_UNDERLINE) !== 0} onClick={() => applyFormat('underline')}>
+        <Underline className="h-3.5 w-3.5" aria-hidden="true" />
+      </ToolbarActionButton>
+      <ToolbarActionButton title="Inline code" active={(currentFormat & IS_CODE) !== 0} onClick={() => applyFormat('code')}>
+        <Code className="h-3.5 w-3.5" aria-hidden="true" />
+      </ToolbarActionButton>
+    </div>
+  )
+}
+
+function InsertButtons() {
+  const openLinkEditDialog = usePublisher(openLinkEditDialog$)
+  const openNewImageDialog = usePublisher(openNewImageDialog$)
+  const insertTable = usePublisher(insertTable$)
+  const insertCodeBlock = usePublisher(insertCodeBlock$)
+
+  return (
+    <>
+      <ToolbarActionButton title="Insert link" onClick={() => openLinkEditDialog()}>
+        <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
+      </ToolbarActionButton>
+      <ToolbarActionButton title="Insert image" onClick={() => openNewImageDialog()}>
+        <ImagePlus className="h-3.5 w-3.5" aria-hidden="true" />
+      </ToolbarActionButton>
+      <ToolbarActionButton title="Insert table" onClick={() => insertTable({ rows: 3, columns: 3 })}>
+        <Table2 className="h-3.5 w-3.5" aria-hidden="true" />
+      </ToolbarActionButton>
+      <ToolbarActionButton title="Insert code block" onClick={() => insertCodeBlock({ language: 'txt' })}>
+        <SquareCode className="h-3.5 w-3.5" aria-hidden="true" />
+      </ToolbarActionButton>
+    </>
   )
 }
 
@@ -311,15 +402,7 @@ function DaisyImageDialog() {
             {imageDialogState.type === 'editing' ? 'Edit image' : 'Insert image'}
           </h3>
           <button className="btn btn-sm btn-circle btn-ghost" type="button" onClick={() => closeImageDialog()}>
-            <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" aria-hidden="true">
-              <path
-                d="M4 4l8 8M12 4l-8 8"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
         </div>
 
@@ -403,9 +486,7 @@ function DaisyEditImageToolbar({ nodeKey, imageSource, initialImagePath, title, 
             })
           }}
         >
-          <span className="text-sm leading-none" aria-hidden="true">
-            ✎
-          </span>
+          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
       </li>
       <li className="!my-0">
@@ -419,9 +500,7 @@ function DaisyEditImageToolbar({ nodeKey, imageSource, initialImagePath, title, 
             })
           }}
         >
-          <span className="text-sm leading-none" aria-hidden="true">
-            ✕
-          </span>
+          <X className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
       </li>
     </ul>
@@ -454,9 +533,7 @@ function EditorWorkspace({
               aria-label={mobileSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
               onClick={onToggleMobileSidebar}
             >
-              <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M2 4h12M2 8h12M2 12h12" fill="none" stroke="currentColor" strokeWidth="1.5" />
-              </svg>
+              <Menu className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
             <button
               className="btn btn-xs btn-ghost hidden lg:inline-flex"
@@ -464,31 +541,25 @@ function EditorWorkspace({
               aria-label={desktopSidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
               onClick={onToggleDesktopSidebar}
             >
-              <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M2 3.5h12M2 8h12M2 12.5h12" fill="none" stroke="currentColor" strokeWidth="1.5" />
-              </svg>
+              {desktopSidebarOpen ? (
+                <PanelLeftClose className="h-3.5 w-3.5" aria-hidden="true" />
+              ) : (
+                <PanelLeftOpen className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
             </button>
-            <UndoRedo />
-            <BoldItalicUnderlineToggles />
+            <UndoRedoButtons />
+            <InlineFormatButtons />
             <div className="dropdown dropdown-end lg:hidden">
               <button className="btn btn-xs btn-square" type="button" tabIndex={0} aria-label="More actions">
-                <svg className="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
-                  <circle cx="3.5" cy="8" r="1.25" fill="currentColor" />
-                  <circle cx="8" cy="8" r="1.25" fill="currentColor" />
-                  <circle cx="12.5" cy="8" r="1.25" fill="currentColor" />
-                </svg>
+                <Ellipsis className="h-4 w-4" aria-hidden="true" />
               </button>
               <div
                 tabIndex={0}
                 className="dropdown-content menu z-50 mt-1 w-56 rounded-box border border-base-300 bg-base-100 p-2 shadow"
               >
                 <div className="flex flex-wrap gap-1">
-                  <CodeToggle />
                   <BlockTypeWithListsSelect />
-                  <CreateLink />
-                  <InsertImage />
-                  <InsertTable />
-                  <InsertCodeBlock />
+                  <InsertButtons />
                   <FrontmatterToolbarButton hasFrontmatter={hasFrontmatter} onClick={onOpenFrontmatterDialog} />
                   {supportsSaveFilePicker && (
                     <button className="btn btn-xs" type="button" onClick={() => void onSaveFile({ saveAs: true })}>
@@ -499,12 +570,8 @@ function EditorWorkspace({
               </div>
             </div>
             <div className="hidden items-center gap-1 lg:flex">
-              <CodeToggle />
               <BlockTypeWithListsSelect />
-              <CreateLink />
-              <InsertImage />
-              <InsertTable />
-              <InsertCodeBlock />
+              <InsertButtons />
               <FrontmatterToolbarButton hasFrontmatter={hasFrontmatter} onClick={onOpenFrontmatterDialog} />
             </div>
             <div className="grow" />

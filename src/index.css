@@ -162,7 +162,7 @@ body {
   @apply border-error/40 bg-error/10;
 }
 
-/* Style MDX toolbar controls only; leave DaisyUI .btn buttons (Save/Save As) untouched. */
+/* Style MDX toolbar controls only; keep custom DaisyUI .btn controls untouched. */
 .mdxeditor :is(
     [class*='_toolbarToggleItem_'],
     [class*='_toolbarButton_'],
@@ -170,10 +170,55 @@ body {
     [class*='_toolbarButtonSelectTrigger_'],
     [class*='_selectTrigger_']
   ) {
-  border: 1px solid oklch(var(--b3));
+  --size: calc(var(--size-field, 0.25rem) * 6);
+  --btn-p: 0.5rem;
+  --btn-color: var(--color-base-200);
+  --btn-fg: var(--color-base-content);
+  --btn-rest-fg: var(--color-base-content);
+  --btn-bg: transparent;
+  --btn-border: transparent;
+  --btn-border-style: solid;
+  --btn-shadow: 0 0 0 0 oklch(0% 0 0 / 0);
+  --btn-inset: 0 0 0 0 oklch(0% 0 0 / 0);
+  cursor: pointer;
+  user-select: none;
+  border-width: var(--border);
+  border-style: var(--btn-border-style);
+  border-color: var(--btn-border);
   border-radius: var(--radius-field);
-  background: oklch(var(--b1));
-  color: oklch(var(--bc));
+  height: var(--size);
+  min-height: var(--size);
+  padding-inline: var(--btn-p);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+  background-color: var(--btn-bg);
+  color: var(--btn-rest-fg);
+  box-shadow: var(--btn-inset) inset, var(--btn-shadow);
+  text-shadow: 0 0.5px oklch(100% 0 0 / calc(var(--depth) * 0.15));
+  transition-property: color, background-color, border-color, box-shadow, transform;
+  transition-duration: 0.2s;
+  transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  background-image: none;
+  transform: translateY(0);
+}
+
+@media (hover: hover) {
+  .mdxeditor :is(
+      [class*='_toolbarToggleItem_'],
+      [class*='_toolbarButton_'],
+      [class*='_toolbarNodeKindSelectTrigger_'],
+      [class*='_toolbarButtonSelectTrigger_'],
+      [class*='_selectTrigger_']
+    ):hover {
+    --btn-bg: color-mix(in oklab, var(--btn-color, var(--color-base-200)), #000 7%);
+    --btn-border: color-mix(in oklab, var(--btn-bg), #000 calc(var(--depth) * 5%));
+    --btn-inset: 0 0.5px 0 0.5px oklch(100% 0 0 / calc(var(--depth) * 6%));
+    --btn-shadow:
+      0 3px 2px -2px color-mix(in oklab, var(--btn-bg) calc(var(--depth) * 30%), #0000),
+      0 4px 3px -2px color-mix(in oklab, var(--btn-bg) calc(var(--depth) * 30%), #0000);
+    color: var(--btn-fg);
+  }
 }
 
 .mdxeditor :is(
@@ -182,15 +227,36 @@ body {
     [class*='_toolbarNodeKindSelectTrigger_'],
     [class*='_toolbarButtonSelectTrigger_'],
     [class*='_selectTrigger_']
-  ):hover {
-  background: oklch(var(--b2));
+  ):active {
+  --btn-bg: color-mix(in oklab, var(--btn-color, var(--color-base-200)), #000 5%);
+  --btn-border: color-mix(in oklab, var(--btn-color, var(--color-base-200)), #000 7%);
+  --btn-inset: 0 0 0 0 oklch(0% 0 0 / 0);
+  --btn-shadow: 0 0 0 0 oklch(0% 0 0 / 0);
+  color: var(--btn-fg, var(--color-base-content));
+  transform: translateY(0.5px);
 }
 
 .mdxeditor :is([class*='_toolbarToggleItem_'], [class*='_toolbarButton_'])[data-state='on'],
-.mdxeditor :is([class*='_toolbarToggleItem_'], [class*='_toolbarButton_']):active {
-  border-color: oklch(var(--p));
-  background: oklch(var(--p) / 0.12);
-  color: oklch(var(--pc));
+.mdxeditor :is([class*='_toolbarNodeKindSelectTrigger_'], [class*='_toolbarButtonSelectTrigger_'], [class*='_selectTrigger_'])[data-state='open'] {
+  --btn-bg: color-mix(in oklab, var(--btn-color, var(--color-base-200)), #000 5%);
+  --btn-border: color-mix(in oklab, var(--btn-color, var(--color-base-200)), #000 7%);
+  --btn-inset: 0 0 0 0 oklch(0% 0 0 / 0);
+  --btn-shadow: 0 0 0 0 oklch(0% 0 0 / 0);
+  color: var(--btn-fg, var(--color-base-content));
+  isolation: isolate;
+}
+
+.mdxeditor :is(
+    [class*='_toolbarToggleItem_'],
+    [class*='_toolbarButton_'],
+    [class*='_toolbarNodeKindSelectTrigger_'],
+    [class*='_toolbarButtonSelectTrigger_'],
+    [class*='_selectTrigger_']
+  ):focus-visible {
+  isolation: isolate;
+  outline-width: 2px;
+  outline-style: solid;
+  outline-color: var(--btn-color, var(--color-base-content));
 }
 
 .mdxeditor .mdxeditor-toolbar svg {

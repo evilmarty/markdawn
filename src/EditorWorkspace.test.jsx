@@ -5,7 +5,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import EditorWorkspace from './EditorWorkspace'
 
 vi.mock('@mdxeditor/gurx', () => ({
-  useCellValue: () => ({ type: 'inactive' }),
+  useCellValue: () => ({
+    type: 'inactive',
+    valueOf: () => 0,
+  }),
   usePublisher: () => vi.fn(),
 }))
 
@@ -15,6 +18,8 @@ vi.mock('@lexical/react/LexicalComposerContext', () => ({
 
 vi.mock('lexical', () => ({
   $getNodeByKey: () => ({ remove: vi.fn() }),
+  UNDO_COMMAND: Symbol('UNDO_COMMAND'),
+  REDO_COMMAND: Symbol('REDO_COMMAND'),
 }))
 
 vi.mock('@mdxeditor/editor', async () => {
@@ -78,8 +83,20 @@ vi.mock('@mdxeditor/editor', async () => {
     codeMirrorPlugin: plugin('codeMirror'),
     markdownShortcutPlugin: plugin('markdownShortcut'),
     imagePlugin,
+    activeEditor$: signal,
+    applyFormat$: signal,
     currentBlockType$: signal,
+    currentFormat$: signal,
     currentListType$: signal,
+    DEFAULT_FORMAT: 0,
+    IS_BOLD: 1,
+    IS_ITALIC: 2,
+    IS_UNDERLINE: 8,
+    IS_CODE: 16,
+    insertCodeBlock$: signal,
+    insertTable$: signal,
+    openLinkEditDialog$: signal,
+    openNewImageDialog$: signal,
     applyBlockType$: signal,
     applyListType$: signal,
     imageDialogState$: signal,

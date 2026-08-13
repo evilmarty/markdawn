@@ -1,3 +1,4 @@
+import { X } from 'lucide-react'
 import { makeFrontmatterRow } from '../lib/frontmatter'
 
 function FrontmatterDialog({ open, rows, setRows, onCancel, onSave }) {
@@ -49,7 +50,7 @@ function FrontmatterDialog({ open, rows, setRows, onCancel, onSave }) {
                   })
                 }
               >
-                ✕
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
           ))}
