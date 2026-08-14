@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { ChangeEvent } from 'react'
 import { FolderOpen, Plus, X } from 'lucide-react'
 import packageJson from '../package.json'
 import FrontmatterDialog from './components/FrontmatterDialog'
@@ -12,6 +13,8 @@ import {
   splitFrontmatter,
 } from './lib/frontmatter'
 import { useSessionDraftPersistence } from './hooks/useSessionDraftPersistence'
+import type { AppTab, EditorHandle, SaveFileOptions, SessionDraft } from './types/app'
+import type { FrontmatterRow } from './lib/frontmatter'
 
 const APP_NAME = packageJson.name
 
@@ -76,6 +79,23 @@ Welcome to Markdawn, your editable Markdown preview.
 > Tip: use the toolbar above to insert rich content quickly.
 `
 
+type MakeTabOptions = Partial<Omit<AppTab, 'id' | 'isDirty'>> & {
+  id?: string
+  isDirty?: boolean
+}
+
+function asError(error: unknown): Error {
+  return error instanceof Error ? error : new Error('Unknown error')
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function isPersistedTab(value: unknown): value is Pick<AppTab, 'id' | 'fileName' | 'markdown' | 'savedMarkdown' | 'isDirty'> {
+  if (!isRecord(value)) return false
+  return typeof value.fileName === 'string' && typeof value.markdown === 'string'
+}
 
 export function makeTab({
   id,
@@ -84,7 +104,7 @@ export function makeTab({
   fileHandle = null,
   savedMarkdown = markdown,
   isDirty,
-} = {}) {
+}: MakeTabOptions = {}): AppTab {
   const nextId =
     id ??
     (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -105,11 +125,12 @@ export function loadDraftFromSession() {
   try {
     const rawSession = sessionStorage.getItem(SESSION_STORAGE_KEY)
     if (rawSession) {
-      const parsed = JSON.parse(rawSession)
+      const parsed: unknown = JSON.parse(rawSession)
+      if (!isRecord(parsed)) return null
       const tabs =
-        Array.isArray(parsed?.tabs) && parsed.tabs.length > 0
+        Array.isArray(parsed.tabs) && parsed.tabs.length > 0
           ? parsed.tabs
-              .filter((tab) => typeof tab?.fileName === 'string' && typeof tab?.markdown === 'string')
+              .filter((tab): tab is Pick<AppTab, 'id' | 'fileName' | 'markdown' | 'savedMarkdown' | 'isDirty'> => isPersistedTab(tab))
               .map((tab) =>
                 makeTab({
                   id: typeof tab.id === 'string' ? tab.id : undefined,
@@ -121,7 +142,7 @@ export function loadDraftFromSession() {
               )
           : []
       if (tabs.length > 0) {
-        const activeTabId = tabs.some((tab) => tab.id === parsed.activeTabId) ? parsed.activeTabId : tabs[0].id
+        const activeTabId = tabs.some((tab) => tab.id === parsed.activeTabId) ? (parsed.activeTabId as string) : tabs[0].id
         return { tabs, activeTabId }
       }
     }
@@ -132,16 +153,16 @@ export function loadDraftFromSession() {
   }
 }
 
-export function fileToDataUrl(file) {
+export function fileToDataUrl(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = () => resolve(reader.result)
+    reader.onload = () => resolve(String(reader.result ?? ''))
     reader.onerror = () => reject(new Error('Failed to convert image to data URL.'))
     reader.readAsDataURL(file)
   })
 }
 
-export function downloadTextFile(content, fileName) {
+export function downloadTextFile(content: string, fileName: string): void {
   const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' })
   const href = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
@@ -152,10 +173,10 @@ export function downloadTextFile(content, fileName) {
 }
 
 function App() {
-  const [draftFromSession] = useState(() => loadDraftFromSession())
-  const [tabs, setTabs] = useState(() => draftFromSession?.tabs ?? [makeTab()])
-  const [activeTabId, setActiveTabId] = useState(() => draftFromSession?.activeTabId ?? null)
-  const [theme, setTheme] = useState(() => {
+  const [draftFromSession] = useState<SessionDraft | null>(() => loadDraftFromSession())
+  const [tabs, setTabs] = useState<AppTab[]>(() => draftFromSession?.tabs ?? [makeTab()])
+  const [activeTabId, setActiveTabId] = useState<string | null>(() => draftFromSession?.activeTabId ?? null)
+  const [theme, setTheme] = useState<string>(() => {
     try {
       return sessionStorage.getItem(SESSION_THEME_KEY) ?? DEFAULT_THEME
     } catch {
@@ -165,10 +186,10 @@ function App() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true)
   const [frontmatterDialogOpen, setFrontmatterDialogOpen] = useState(false)
-  const [frontmatterRows, setFrontmatterRows] = useState(() => [makeFrontmatterRow()])
+  const [frontmatterRows, setFrontmatterRows] = useState<FrontmatterRow[]>(() => [makeFrontmatterRow()])
   const [, setStatusMessage] = useState(draftFromSession ? 'Recovered tabs from this browser session.' : 'Ready.')
-  const editorRef = useRef(null)
-  const fallbackOpenInputRef = useRef(null)
+  const editorRef = useRef<EditorHandle | null>(null)
+  const fallbackOpenInputRef = useRef<HTMLInputElement | null>(null)
 
   const supportsOpenFilePicker = typeof window !== 'undefined' && 'showOpenFilePicker' in window
   const supportsSaveFilePicker = typeof window !== 'undefined' && 'showSaveFilePicker' in window
@@ -180,7 +201,7 @@ function App() {
     [activeTab?.markdown],
   )
 
-  const imageUploadHandler = useCallback(async (imageFile) => {
+  const imageUploadHandler = useCallback(async (imageFile: File): Promise<string> => {
     const dataUrl = await fileToDataUrl(imageFile)
     return String(dataUrl)
   }, [])
@@ -193,7 +214,7 @@ function App() {
     try {
       sessionStorage.setItem(SESSION_THEME_KEY, theme)
     } catch (error) {
-      setStatusMessage(`Theme preference not saved: ${error?.message ?? 'storage unavailable'}`)
+      setStatusMessage(`Theme preference not saved: ${asError(error).message || 'storage unavailable'}`)
     }
     if (theme === 'system') {
       document.documentElement.removeAttribute('data-theme')
@@ -213,7 +234,7 @@ function App() {
     setStatusMessage,
   })
 
-  const updateTab = useCallback((tabId, updater) => {
+  const updateTab = useCallback((tabId: string, updater: (tab: AppTab) => AppTab) => {
     setTabs((prevTabs) =>
       prevTabs.map((tab) => {
         if (tab.id !== tabId) return tab
@@ -246,7 +267,7 @@ function App() {
   }, [persistTabsToSession, syncEditorValueIntoActiveTab])
 
   const handleSwitchTab = useCallback(
-    (tabId) => {
+    (tabId: string) => {
       if (tabId === currentActiveTabId) return
       syncEditorValueIntoActiveTab()
       setActiveTabId(tabId)
@@ -256,7 +277,7 @@ function App() {
   )
 
   const handleCloseTab = useCallback(
-    (tabId) => {
+    (tabId: string) => {
       const closingTab = tabs.find((tab) => tab.id === tabId)
       if (!closingTab) return
       const closingMarkdown =
@@ -297,7 +318,7 @@ function App() {
   )
 
   const handleOpenFile = useCallback(async () => {
-    if (supportsOpenFilePicker) {
+    if (supportsOpenFilePicker && typeof window.showOpenFilePicker === 'function') {
       try {
         const handles = await window.showOpenFilePicker({
           multiple: true,
@@ -313,7 +334,7 @@ function App() {
           excludeAcceptAllOption: false,
         })
 
-        const loadedTabs = []
+        const loadedTabs: AppTab[] = []
         for (const handle of handles) {
           const file = await handle.getFile()
           const text = await file.text()
@@ -334,8 +355,9 @@ function App() {
           )
         }
       } catch (error) {
-        if (error?.name !== 'AbortError') {
-          setStatusMessage(`Open failed: ${error.message}`)
+        const parsedError = asError(error)
+        if (parsedError.name !== 'AbortError') {
+          setStatusMessage(`Open failed: ${parsedError.message}`)
         }
       }
       return
@@ -345,13 +367,13 @@ function App() {
   }, [persistTabsToSession, supportsOpenFilePicker, syncEditorValueIntoActiveTab])
 
   const onFallbackFilePicked = useCallback(
-    async (event) => {
+    async (event: ChangeEvent<HTMLInputElement>) => {
       const selectedFiles = Array.from(event.target.files ?? [])
       if (selectedFiles.length === 0) return
 
       syncEditorValueIntoActiveTab()
 
-      const loadedTabs = []
+      const loadedTabs: AppTab[] = []
       for (const file of selectedFiles) {
         const text = await file.text()
         loadedTabs.push(makeTab({ fileName: file.name, markdown: text, savedMarkdown: text }))
@@ -373,11 +395,11 @@ function App() {
   )
 
   const handleSaveFile = useCallback(
-    async ({ saveAs = false } = {}) => {
+    async ({ saveAs = false }: SaveFileOptions = {}) => {
       if (!activeTab) return
       const content = editorRef.current?.getMarkdown() ?? activeTab.markdown
 
-      if (supportsSaveFilePicker) {
+      if (supportsSaveFilePicker && typeof window.showSaveFilePicker === 'function') {
         try {
           const handle =
             !saveAs && activeTab.fileHandle
@@ -415,8 +437,9 @@ function App() {
           setStatusMessage(`Saved ${handle.name ?? activeTab.fileName}.`)
           return
         } catch (error) {
-          if (error?.name !== 'AbortError') {
-            setStatusMessage(`Save failed: ${error.message}`)
+          const parsedError = asError(error)
+          if (parsedError.name !== 'AbortError') {
+            setStatusMessage(`Save failed: ${parsedError.message}`)
           }
           return
         }

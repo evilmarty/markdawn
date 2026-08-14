@@ -1,7 +1,17 @@
+import type { Dispatch, SetStateAction } from 'react'
 import { X } from 'lucide-react'
 import { makeFrontmatterRow } from '../lib/frontmatter'
+import type { FrontmatterRow } from '../lib/frontmatter'
 
-function FrontmatterDialog({ open, rows, setRows, onCancel, onSave }) {
+type FrontmatterDialogProps = {
+  open: boolean
+  rows: FrontmatterRow[]
+  setRows: Dispatch<SetStateAction<FrontmatterRow[]>>
+  onCancel: () => void
+  onSave: () => void
+}
+
+function FrontmatterDialog({ open, rows, setRows, onCancel, onSave }: FrontmatterDialogProps) {
   if (!open) return null
 
   return (

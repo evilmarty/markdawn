@@ -1,4 +1,6 @@
 import { useMemo } from 'react'
+import type { RefObject } from 'react'
+import type { JSX } from 'react'
 import {
   codeBlockPlugin,
   codeMirrorPlugin,
@@ -20,6 +22,7 @@ import DaisyImageDialog from './editor/dialogs/DaisyImageDialog'
 import DaisyLinkDialog from './editor/dialogs/DaisyLinkDialog'
 import DaisyEditImageToolbar from './editor/image/DaisyEditImageToolbar'
 import EditorToolbar from './editor/Toolbar'
+import type { AppTab, EditorHandle, SaveFileOptions } from './types/app'
 
 const CODE_BLOCK_LANGUAGES = {
   txt: 'Plain text',
@@ -63,6 +66,22 @@ const editorLexicalTheme = {
   },
 }
 
+export type EditorWorkspaceProps = {
+  activeTab: AppTab | null
+  editorRef: RefObject<EditorHandle | null>
+  hasFrontmatter: boolean
+  mobileSidebarOpen: boolean
+  desktopSidebarOpen: boolean
+  onChange: (nextMarkdown: string, initialMarkdownNormalize: boolean) => void
+  onSaveFile: (options?: SaveFileOptions) => Promise<void>
+  onToggleMobileSidebar: () => void
+  onToggleDesktopSidebar: () => void
+  onOpenFrontmatterDialog: () => void
+  saveButtonClass: string
+  supportsSaveFilePicker: boolean
+  imageUploadHandler: (imageFile: File) => Promise<string>
+}
+
 function EditorWorkspace({
   activeTab,
   editorRef,
@@ -77,11 +96,11 @@ function EditorWorkspace({
   saveButtonClass,
   supportsSaveFilePicker,
   imageUploadHandler,
-}) {
+}: EditorWorkspaceProps) {
   const plugins = useMemo(
     () => [
       toolbarPlugin({
-        toolbarContents: () => (
+        toolbarContents: (): JSX.Element => (
           <EditorToolbar
             hasFrontmatter={hasFrontmatter}
             mobileSidebarOpen={mobileSidebarOpen}
@@ -101,7 +120,7 @@ function EditorWorkspace({
       quotePlugin(),
       thematicBreakPlugin(),
       linkPlugin(),
-      linkDialogPlugin({ LinkDialog: DaisyLinkDialog }),
+      linkDialogPlugin({ LinkDialog: DaisyLinkDialog as unknown as () => JSX.Element }),
       tablePlugin(),
       codeBlockPlugin({ defaultCodeBlockLanguage: 'txt' }),
       codeMirrorPlugin({ codeBlockLanguages: CODE_BLOCK_LANGUAGES }),
@@ -109,7 +128,7 @@ function EditorWorkspace({
       imagePlugin({
         imageUploadHandler,
         ImageDialog: DaisyImageDialog,
-        EditImageToolbar: DaisyEditImageToolbar,
+        EditImageToolbar: DaisyEditImageToolbar as unknown as () => JSX.Element,
       }),
     ],
     [

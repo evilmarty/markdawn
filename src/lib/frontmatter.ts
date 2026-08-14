@@ -1,6 +1,12 @@
 import YamlParser from 'js-yaml'
 
-export function splitFrontmatter(markdown) {
+export type FrontmatterRow = {
+  id: string
+  key: string
+  value: string
+}
+
+export function splitFrontmatter(markdown: string): { frontmatter: string; body: string } {
   const match = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)
   if (!match) return { frontmatter: '', body: markdown }
   return {
@@ -9,7 +15,7 @@ export function splitFrontmatter(markdown) {
   }
 }
 
-export function applyFrontmatter(markdown, nextFrontmatter) {
+export function applyFrontmatter(markdown: string, nextFrontmatter: string): string {
   const { body } = splitFrontmatter(markdown)
   const cleanedBody = body.replace(/^\n+/, '')
   const trimmedFrontmatter = nextFrontmatter.trim()
@@ -17,7 +23,7 @@ export function applyFrontmatter(markdown, nextFrontmatter) {
   return `---\n${trimmedFrontmatter}\n---\n\n${cleanedBody}`
 }
 
-export function makeFrontmatterRow(key = '', value = '') {
+export function makeFrontmatterRow(key = '', value = ''): FrontmatterRow {
   return {
     id:
       typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -28,7 +34,7 @@ export function makeFrontmatterRow(key = '', value = '') {
   }
 }
 
-export function parseFrontmatterRows(markdown) {
+export function parseFrontmatterRows(markdown: string): FrontmatterRow[] {
   const { frontmatter } = splitFrontmatter(markdown)
   if (!frontmatter.trim()) return [makeFrontmatterRow()]
 
@@ -49,8 +55,8 @@ export function parseFrontmatterRows(markdown) {
   }
 }
 
-export function rowsToFrontmatter(rows) {
-  const data = {}
+export function rowsToFrontmatter(rows: FrontmatterRow[]): string {
+  const data: Record<string, unknown> = {}
 
   for (const row of rows) {
     const key = row.key.trim()

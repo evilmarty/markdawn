@@ -1,22 +1,39 @@
 import { useCallback, useEffect, useRef } from 'react'
+import type { AppTab } from '../types/app'
 
 const SESSION_PERSIST_DEBOUNCE_MS = 350
 
-export function formatPersistError(error) {
-  const name = error?.name
+type PersistPayload = {
+  tabs: Pick<AppTab, 'id' | 'fileName' | 'markdown' | 'savedMarkdown' | 'isDirty'>[]
+  activeTabId: string
+  updatedAt: number
+}
+
+type UseSessionDraftPersistenceParams = {
+  sessionKey: string
+  setStatusMessage: (message: string) => void
+}
+
+type PersistOptions = {
+  flush?: boolean
+}
+
+export function formatPersistError(error: unknown): string {
+  const name = error instanceof Error ? error.name : undefined
   if (name === 'QuotaExceededError') {
     return 'Autosave paused: browser session storage is full.'
   }
-  return `Autosave paused: ${error?.message ?? 'Failed to write draft data.'}`
+  const message = error instanceof Error ? error.message : 'Failed to write draft data.'
+  return `Autosave paused: ${message}`
 }
 
-export function useSessionDraftPersistence({ sessionKey, setStatusMessage }) {
-  const sessionPersistTimerRef = useRef(null)
-  const pendingSessionPayloadRef = useRef(null)
+export function useSessionDraftPersistence({ sessionKey, setStatusMessage }: UseSessionDraftPersistenceParams) {
+  const sessionPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingSessionPayloadRef = useRef<PersistPayload | null>(null)
   const didReportPersistFailureRef = useRef(false)
 
   const writeSessionPayload = useCallback(
-    (payload) => {
+    (payload: PersistPayload): boolean => {
       try {
         sessionStorage.setItem(sessionKey, JSON.stringify(payload))
         if (didReportPersistFailureRef.current) {
@@ -25,8 +42,9 @@ export function useSessionDraftPersistence({ sessionKey, setStatusMessage }) {
         didReportPersistFailureRef.current = false
         return true
       } catch (error) {
+        const parsedError = error instanceof Error ? error : new Error('Unknown persistence error')
         if (!didReportPersistFailureRef.current) {
-          setStatusMessage(formatPersistError(error))
+          setStatusMessage(formatPersistError(parsedError))
           didReportPersistFailureRef.current = true
         }
         return false
@@ -47,7 +65,7 @@ export function useSessionDraftPersistence({ sessionKey, setStatusMessage }) {
   }, [writeSessionPayload])
 
   const persistTabsToSession = useCallback(
-    (nextTabs, nextActiveTabId, { flush = false } = {}) => {
+    (nextTabs: AppTab[], nextActiveTabId: string, { flush = false }: PersistOptions = {}) => {
       pendingSessionPayloadRef.current = {
         tabs: nextTabs.map(({ id, fileName, markdown, savedMarkdown, isDirty }) => ({
           id,
@@ -83,7 +101,7 @@ export function useSessionDraftPersistence({ sessionKey, setStatusMessage }) {
   )
 
   useEffect(() => {
-    const flushOnPageExit = () => flushSessionPersist()
+    const flushOnPageExit = (): void => flushSessionPersist()
     const flushOnVisibilityHidden = () => {
       if (document.visibilityState === 'hidden') flushSessionPersist()
     }

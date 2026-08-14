@@ -3,18 +3,34 @@ import { closeImageDialog$, imageDialogState$, saveImage$ } from '@mdxeditor/edi
 import { useCellValue, usePublisher } from '@mdxeditor/gurx'
 import { X } from '../icons'
 
-function normalizeDimension(value) {
+type ImageDialogState =
+  | { type: 'inactive' }
+  | {
+      type: 'new'
+    }
+  | {
+      type: 'editing'
+      initialValues: {
+        src?: string
+        altText?: string
+        title?: string
+        width?: number
+        height?: number
+      }
+    }
+
+function normalizeDimension(value: number | undefined): number | '' {
   return typeof value === 'number' ? value : ''
 }
 
-function parseDimension(value) {
+function parseDimension(value: string): number | undefined {
   if (!value) return undefined
   const parsed = Number.parseInt(value, 10)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
 }
 
 function DaisyImageDialog() {
-  const imageDialogState = useCellValue(imageDialogState$)
+  const imageDialogState = useCellValue(imageDialogState$) as ImageDialogState
   const closeImageDialog = usePublisher(closeImageDialog$)
   const saveImage = usePublisher(saveImage$)
   const isOpen = imageDialogState.type !== 'inactive'
@@ -24,7 +40,7 @@ function DaisyImageDialog() {
   const [title, setTitle] = useState('')
   const [width, setWidth] = useState('')
   const [height, setHeight] = useState('')
-  const [fileList, setFileList] = useState(null)
+  const [fileList, setFileList] = useState<FileList | null>(null)
 
   useEffect(() => {
     if (imageDialogState.type === 'editing') {
@@ -56,7 +72,14 @@ function DaisyImageDialog() {
         className="modal-box w-full max-w-2xl"
         onSubmit={(event) => {
           event.preventDefault()
-          const payload = {
+          const payload: {
+            src: string | undefined
+            altText: string | undefined
+            title: string | undefined
+            width: number | undefined
+            height: number | undefined
+            file?: FileList
+          } = {
             src: src.trim() || undefined,
             altText: altText.trim() || undefined,
             title: title.trim() || undefined,

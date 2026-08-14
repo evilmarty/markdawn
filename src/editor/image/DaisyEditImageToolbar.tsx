@@ -4,9 +4,21 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import { $getNodeByKey } from 'lexical'
 import { Pencil, X } from '../icons'
 
-function DaisyEditImageToolbar({ nodeKey, imageSource, initialImagePath, title, alt, width, height }) {
+type DaisyEditImageToolbarProps = {
+  nodeKey?: string
+  imageSource?: string
+  initialImagePath?: string
+  title?: string
+  alt?: string
+  width?: number
+  height?: number
+}
+
+function DaisyEditImageToolbar({ nodeKey, imageSource, initialImagePath, title, alt, width, height }: DaisyEditImageToolbarProps) {
   const openEditImageDialog = usePublisher(openEditImageDialog$)
   const [editor] = useLexicalComposerContext()
+
+  if (!nodeKey || !imageSource) return null
 
   return (
     <ul className="mdx-image-edit-toolbar menu menu-xs menu-horizontal absolute right-2 top-2 z-10 rounded-box border border-base-300 bg-base-100/90 p-1 shadow backdrop-blur-sm">

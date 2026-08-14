@@ -2,9 +2,19 @@ import { useEffect, useState } from 'react'
 import { cancelLinkEdit$, linkDialogState$, showLinkTitleField$, updateLink$ } from '@mdxeditor/editor'
 import { useCellValue, usePublisher } from '@mdxeditor/gurx'
 
+type LinkDialogState =
+  | { type: 'inactive' }
+  | {
+      type: 'edit'
+      url?: string
+      text?: string
+      title?: string
+      withAnchorText?: boolean
+    }
+
 function DaisyLinkDialog() {
-  const linkDialogState = useCellValue(linkDialogState$)
-  const showLinkTitleField = useCellValue(showLinkTitleField$)
+  const linkDialogState = useCellValue(linkDialogState$) as LinkDialogState
+  const showLinkTitleField = Boolean(useCellValue(showLinkTitleField$))
   const updateLink = usePublisher(updateLink$)
   const cancelLinkEdit = usePublisher(cancelLinkEdit$)
   const [url, setUrl] = useState('')

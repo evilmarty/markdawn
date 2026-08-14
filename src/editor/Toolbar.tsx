@@ -1,3 +1,4 @@
+import type { MouseEventHandler, ReactNode } from 'react'
 import {
   activeEditor$,
   applyBlockType$,
@@ -18,6 +19,7 @@ import {
 } from '@mdxeditor/editor'
 import { useCellValue, usePublisher } from '@mdxeditor/gurx'
 import { REDO_COMMAND, UNDO_COMMAND } from 'lexical'
+import type { SaveFileOptions } from '../types/app'
 import {
   Bold,
   Code,
@@ -36,7 +38,37 @@ import {
   Underline,
 } from './icons'
 
-function ToolbarActionButton({ title, active = false, onClick, children }) {
+type ToolbarActionButtonProps = {
+  title: string
+  active?: boolean
+  onClick: MouseEventHandler<HTMLButtonElement>
+  children: ReactNode
+}
+
+type FrontmatterToolbarButtonProps = {
+  hasFrontmatter: boolean
+  onClick: MouseEventHandler<HTMLButtonElement>
+}
+
+type EditorToolbarProps = {
+  hasFrontmatter: boolean
+  mobileSidebarOpen: boolean
+  desktopSidebarOpen: boolean
+  onSaveFile: (options?: SaveFileOptions) => Promise<void>
+  onToggleMobileSidebar: MouseEventHandler<HTMLButtonElement>
+  onToggleDesktopSidebar: MouseEventHandler<HTMLButtonElement>
+  onOpenFrontmatterDialog: MouseEventHandler<HTMLButtonElement>
+  saveButtonClass: string
+  supportsSaveFilePicker: boolean
+}
+
+type BlockType = 'paragraph' | 'quote' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
+
+function isBlockType(value: string): value is BlockType {
+  return ['paragraph', 'quote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(value)
+}
+
+function ToolbarActionButton({ title, active = false, onClick, children }: ToolbarActionButtonProps) {
   return (
     <button className={`btn btn-xs btn-ghost${active ? ' btn-active' : ''}`} type="button" aria-label={title} title={title} onClick={onClick}>
       {children}
@@ -44,7 +76,7 @@ function ToolbarActionButton({ title, active = false, onClick, children }) {
   )
 }
 
-function FrontmatterToolbarButton({ hasFrontmatter, onClick }) {
+function FrontmatterToolbarButton({ hasFrontmatter, onClick }: FrontmatterToolbarButtonProps) {
   return (
     <button
       className="btn btn-xs btn-ghost"
@@ -155,7 +187,9 @@ function BlockTypeWithListsSelect() {
           return
         }
         applyListType('')
-        applyBlockType(nextValue)
+        if (isBlockType(nextValue)) {
+          applyBlockType(nextValue)
+        }
       }}
     >
       <option value="paragraph">Paragraph</option>
@@ -182,7 +216,7 @@ function EditorToolbar({
   onOpenFrontmatterDialog,
   saveButtonClass,
   supportsSaveFilePicker,
-}) {
+}: EditorToolbarProps) {
   return (
     <>
       <button

@@ -1,11 +1,38 @@
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react'
+import type { MutableRefObject, ReactNode } from 'react'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import packageJson from '../package.json'
 import App, { downloadTextFile, fileToDataUrl, loadDraftFromSession, makeTab } from './App'
+import type { SaveFileOptions } from './types/app'
 
 const APP_NAME = packageJson.name
+
+type MockEditorWorkspaceProps = {
+  activeTab: { markdown: string }
+  editorRef: MutableRefObject<unknown>
+  mobileSidebarOpen: boolean
+  onChange?: (nextMarkdown: string, initialMarkdownNormalize: boolean) => void
+  onOpenFrontmatterDialog: () => void
+  onSaveFile: (options?: SaveFileOptions) => Promise<void>
+  onToggleMobileSidebar: () => void
+  saveButtonClass: string
+  supportsSaveFilePicker: boolean
+  imageUploadHandler?: (file: File) => Promise<string>
+}
+
+type MockEditorPlugin = {
+  __kind?: string
+  toolbarContents?: () => ReactNode
+  imageUploadHandler?: (file: File) => Promise<string>
+}
+
+type MockMdxEditorProps = {
+  markdown: string
+  onChange?: (nextMarkdown: string, initialMarkdownNormalize: boolean) => void
+  plugins?: MockEditorPlugin[]
+}
 
 vi.mock('./EditorWorkspace', () => {
   const MockEditorWorkspace = ({
@@ -19,7 +46,7 @@ vi.mock('./EditorWorkspace', () => {
     saveButtonClass,
     supportsSaveFilePicker,
     imageUploadHandler,
-  }) => {
+  }: MockEditorWorkspaceProps) => {
     const [value, setValue] = useState(activeTab.markdown)
 
     useEffect(() => {
@@ -28,8 +55,8 @@ vi.mock('./EditorWorkspace', () => {
 
     useImperativeHandle(editorRef, () => ({
       getMarkdown: () => value,
-      setMarkdown: (next) => setValue(next),
-      insertMarkdown: (next) => setValue((prev) => prev + next),
+      setMarkdown: (next: string) => setValue(next),
+      insertMarkdown: (next: string) => setValue((prev) => prev + next),
       focus: () => {},
       getContentEditableHTML: () => value,
       getSelectionMarkdown: () => value,
@@ -91,12 +118,12 @@ vi.mock('./EditorWorkspace', () => {
 })
 
 vi.mock('@mdxeditor/editor', async () => {
-  const toolbarPlugin = (params) => ({ __kind: 'toolbar', ...params })
-  const plugin = (name) => () => ({ __kind: name })
-  const imagePlugin = (params) => ({ __kind: 'image', ...params })
+  const toolbarPlugin = (params: Record<string, unknown>) => ({ __kind: 'toolbar', ...params })
+  const plugin = (name: string) => () => ({ __kind: name })
+  const imagePlugin = (params: Record<string, unknown>) => ({ __kind: 'image', ...params })
   const signal = Symbol('signal')
 
-  const MDXEditor = forwardRef(function MockMDXEditor({ markdown, onChange, plugins }, ref) {
+  const MDXEditor = forwardRef(function MockMDXEditor({ markdown, onChange, plugins }: MockMdxEditorProps, ref) {
     const [value, setValue] = useState(markdown)
 
     useEffect(() => {
@@ -105,8 +132,8 @@ vi.mock('@mdxeditor/editor', async () => {
 
     useImperativeHandle(ref, () => ({
       getMarkdown: () => value,
-      setMarkdown: (next) => setValue(next),
-      insertMarkdown: (next) => setValue((prev) => prev + next),
+      setMarkdown: (next: string) => setValue(next),
+      insertMarkdown: (next: string) => setValue((prev) => prev + next),
       focus: () => {},
       getContentEditableHTML: () => value,
       getSelectionMarkdown: () => value,
@@ -185,7 +212,7 @@ function mockSavePicker(name = 'saved.md') {
   const write = vi.fn(async () => {})
   const close = vi.fn(async () => {})
   const createWritable = vi.fn(async () => ({ write, close }))
-  const handle = { name, createWritable }
+  const handle = { name, createWritable } as unknown as FileSystemFileHandle
   Object.defineProperty(window, 'showSaveFilePicker', {
     configurable: true,
     value: vi.fn(async () => handle),
@@ -193,7 +220,7 @@ function mockSavePicker(name = 'saved.md') {
   return { handle, createWritable, write, close }
 }
 
-function mockOpenPicker(files) {
+function mockOpenPicker(files: { name: string; content: string }[]) {
   const handles = files.map((file) => ({
     name: file.name,
     getFile: async () => ({
@@ -208,7 +235,7 @@ function mockOpenPicker(files) {
 }
 
 describe('App', () => {
-  const firstButton = (name) => screen.getAllByRole('button', { name })[0]
+  const firstButton = (name: string): HTMLButtonElement => screen.getAllByRole('button', { name })[0] as HTMLButtonElement
 
   beforeEach(() => {
     sessionStorage.clear()
@@ -307,7 +334,7 @@ describe('App', () => {
     expect(document.title).toBe(`untitled.md · ${APP_NAME}`)
 
     await user.click(firstButton('Open'))
-    const fileInput = document.querySelector('input[type="file"]')
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
     const file = new File(['# notes'], 'notes.md', { type: 'text/markdown' })
     await user.upload(fileInput, file)
 
@@ -369,7 +396,7 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    const hiddenFileInput = document.querySelector('input[type="file"]')
+    const hiddenFileInput = document.querySelector('input[type="file"]') as HTMLInputElement
     const clickSpy = vi.spyOn(hiddenFileInput, 'click')
     await user.click(firstButton('Open'))
     expect(clickSpy).toHaveBeenCalled()
@@ -421,9 +448,11 @@ describe('App', () => {
 
     const click = vi.fn()
     const realCreateElement = document.createElement.bind(document)
-    vi.spyOn(document, 'createElement').mockImplementation((tagName, options) => {
+    const anchor = document.createElement('a')
+    vi.spyOn(anchor, 'click').mockImplementation(click)
+    vi.spyOn(document, 'createElement').mockImplementation((tagName: string, options?: ElementCreationOptions) => {
       if (tagName === 'a') {
-        return { click, set href(_) {}, set download(_) {} }
+        return anchor
       }
       return realCreateElement(tagName, options)
     })
@@ -456,7 +485,7 @@ describe('App', () => {
 
   it('ignores empty fallback file selection', () => {
     render(<App />)
-    const hiddenFileInput = document.querySelector('input[type="file"]')
+    const hiddenFileInput = document.querySelector('input[type="file"]') as HTMLInputElement
     fireEvent.change(hiddenFileInput, { target: { files: [] } })
     expect(screen.getAllByRole('button', { name: 'untitled.md' })[0]).toBeInTheDocument()
   })
@@ -560,8 +589,9 @@ describe('App helpers', () => {
       }),
     )
     const loaded = loadDraftFromSession()
-    expect(loaded.tabs).toHaveLength(1)
-    expect(loaded.tabs[0].fileName).toBe('saved.md')
+    expect(loaded).not.toBeNull()
+    expect(loaded!.tabs).toHaveLength(1)
+    expect(loaded!.tabs[0].fileName).toBe('saved.md')
 
     sessionStorage.setItem(
       'markdawn.session.v1',
@@ -574,49 +604,57 @@ describe('App helpers', () => {
   })
 
   it('converts files to data url and handles failures', async () => {
-    const RealFileReader = global.FileReader
+    const RealFileReader = globalThis.FileReader
 
     class SuccessfulReader {
+      result: string | ArrayBuffer | null = null
+      onload: null | (() => void) = null
+
       readAsDataURL() {
         this.result = 'data:text/plain;base64,Zm9v'
-        this.onload()
+        this.onload?.()
       }
     }
 
-    global.FileReader = SuccessfulReader
+    globalThis.FileReader = SuccessfulReader as unknown as typeof FileReader
     await expect(fileToDataUrl(new File(['foo'], 'foo.txt'))).resolves.toBe('data:text/plain;base64,Zm9v')
 
     class FailedReader {
+      onerror: null | (() => void) = null
+
       readAsDataURL() {
-        this.onerror()
+        this.onerror?.()
       }
     }
 
-    global.FileReader = FailedReader
+    globalThis.FileReader = FailedReader as unknown as typeof FileReader
     await expect(fileToDataUrl(new File(['foo'], 'foo.txt'))).rejects.toThrow('Failed to convert image to data URL.')
-    global.FileReader = RealFileReader
+    globalThis.FileReader = RealFileReader
   })
 
   it('uses image upload handler through editor plugin wiring', async () => {
     const user = userEvent.setup()
-    const RealFileReader = global.FileReader
+    const RealFileReader = globalThis.FileReader
     class SuccessfulReader {
+      result: string | ArrayBuffer | null = null
+      onload: null | (() => void) = null
+
       readAsDataURL() {
         this.result = 'data:image/png;base64,Zm9v'
-        this.onload()
+        this.onload?.()
       }
     }
-    global.FileReader = SuccessfulReader
+    globalThis.FileReader = SuccessfulReader as unknown as typeof FileReader
     render(<App />)
     await user.click(screen.getAllByRole('button', { name: 'Mock Image Upload' })[0])
-    global.FileReader = RealFileReader
+    globalThis.FileReader = RealFileReader
   })
 
   it('downloads markdown files through browser API', () => {
     const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock')
     const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
-    const click = vi.fn()
-    const anchor = { click, set href(_) {}, set download(_) {} }
+    const anchor = document.createElement('a')
+    const click = vi.spyOn(anchor, 'click').mockImplementation(() => {})
     const createElement = vi.spyOn(document, 'createElement').mockReturnValue(anchor)
 
     downloadTextFile('# hello', 'hello.md')

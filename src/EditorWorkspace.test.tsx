@@ -1,8 +1,21 @@
 import { forwardRef, useImperativeHandle, useState } from 'react'
+import type { ReactNode } from 'react'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import EditorWorkspace from './EditorWorkspace'
+import type { EditorHandle } from './types/app'
+
+type MockEditorPlugin = {
+  __kind?: string
+  toolbarContents?: () => ReactNode
+}
+
+type MockMdxEditorProps = {
+  markdown: string
+  onChange?: (nextMarkdown: string, initialMarkdownNormalize: boolean) => void
+  plugins?: MockEditorPlugin[]
+}
 
 vi.mock('@mdxeditor/gurx', () => ({
   useCellValue: () => ({
@@ -13,7 +26,7 @@ vi.mock('@mdxeditor/gurx', () => ({
 }))
 
 vi.mock('@lexical/react/LexicalComposerContext', () => ({
-  useLexicalComposerContext: () => [{ update: (cb) => cb() }],
+  useLexicalComposerContext: () => [{ update: (cb: () => void) => cb() }],
 }))
 
 vi.mock('lexical', () => ({
@@ -23,18 +36,22 @@ vi.mock('lexical', () => ({
 }))
 
 vi.mock('@mdxeditor/editor', async () => {
-  const toolbarPlugin = (params) => ({ __kind: 'toolbar', ...params })
-  const plugin = (name) => () => ({ __kind: name })
-  const imagePlugin = (params) => ({ __kind: 'image', ...params })
+  const toolbarPlugin = (params: Record<string, unknown>) => ({ __kind: 'toolbar', ...params })
+  const plugin = (name: string) => () => ({ __kind: name })
+  const imagePlugin = (params: Record<string, unknown>) => ({ __kind: 'image', ...params })
   const signal = Symbol('signal')
 
-  const MDXEditor = forwardRef(function MockMDXEditor({ markdown, onChange, plugins }, ref) {
+  const MDXEditor = forwardRef(function MockMDXEditor({ markdown, onChange, plugins }: MockMdxEditorProps, ref) {
     const [value, setValue] = useState(markdown)
     const toolbar = plugins?.find((entry) => entry?.__kind === 'toolbar')
 
     useImperativeHandle(ref, () => ({
       getMarkdown: () => value,
-      setMarkdown: (next) => setValue(next),
+      setMarkdown: (next: string) => setValue(next),
+      insertMarkdown: (next: string) => setValue((prev) => prev + next),
+      focus: () => {},
+      getContentEditableHTML: () => value,
+      getSelectionMarkdown: () => value,
     }))
 
     return (
@@ -102,8 +119,15 @@ vi.mock('@mdxeditor/editor', async () => {
 
 function renderWorkspace(overrides = {}) {
   const props = {
-    activeTab: { id: 'tab-1', markdown: '# test' },
-    editorRef: { current: null },
+    activeTab: {
+      id: 'tab-1',
+      fileName: 'untitled.md',
+      markdown: '# test',
+      fileHandle: null,
+      savedMarkdown: '# test',
+      isDirty: false,
+    },
+    editorRef: { current: null } as { current: EditorHandle | null },
     hasFrontmatter: false,
     mobileSidebarOpen: false,
     desktopSidebarOpen: true,
