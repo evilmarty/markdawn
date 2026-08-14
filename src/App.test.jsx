@@ -417,6 +417,8 @@ describe('App', () => {
     const user = userEvent.setup()
     const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:save')
     const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    render(<App />)
+
     const click = vi.fn()
     const realCreateElement = document.createElement.bind(document)
     vi.spyOn(document, 'createElement').mockImplementation((tagName, options) => {
@@ -426,7 +428,6 @@ describe('App', () => {
       return realCreateElement(tagName, options)
     })
 
-    render(<App />)
     await user.click(firstButton('Mock Edit'))
     await user.click(firstButton('Save'))
 

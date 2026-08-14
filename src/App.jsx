@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { FolderOpen, Plus, X } from 'lucide-react'
 import packageJson from '../package.json'
 import FrontmatterDialog from './components/FrontmatterDialog'
+import EmojiCycler from './components/EmojiCycler'
 import logoSvg from './assets/logo.svg?raw'
 import {
   applyFrontmatter,
@@ -32,6 +33,7 @@ const DEFAULT_LOGO_DATA_URL = `data:image/svg+xml;utf8,${encodeURIComponent(
 const SESSION_STORAGE_KEY = 'markdawn.session.v1'
 const SESSION_THEME_KEY = 'markdawn.theme'
 const DEFAULT_THEME = 'system'
+const FOOTER_EMOJIS = ['❤️', '🍺', '🌯', '🥃', '🍦']
 const DAISY_THEMES = [
   'system',
   'light',
@@ -531,6 +533,16 @@ function App() {
             ))}
           </select>
         </div>
+        <footer className="footer footer-horizontal mt-4 w-full justify-center items-center border-t border-base-300 pt-3 text-base-content">
+          <aside className="grid-flow-col items-center justify-center gap-1 text-sm text-center">
+            Made with
+            <EmojiCycler emojis={FOOTER_EMOJIS} className="inline-block" />
+            by
+            <a href="https://marty.zalega.me" className="link link-accent" title="Website" target="_blank" rel="noreferrer">
+              evilmarty
+            </a>
+          </aside>
+        </footer>
       </aside>
 
       <section className="flex h-screen flex-1">
