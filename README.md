@@ -4,7 +4,7 @@ Markdawn is a web-based Markdown editor where the **preview is the editor**. It 
 
 ## Stack
 
-- React + Vite
+- React + TypeScript + Vite
 - TailwindCSS + DaisyUI
 - `@mdxeditor/editor` for Markdown-aware rich text editing
 - `vite-plugin-pwa` for offline support
@@ -36,6 +36,15 @@ npm run dev
 ```bash
 npm run build
 ```
+
+## Type safety
+
+```bash
+npm run typecheck
+```
+
+- TypeScript is enabled project-wide with strict mode (`tsconfig.json`).
+- File picker APIs are typed in `src/vite-env.d.ts` for browser-safe guards/fallbacks.
 
 ## Deploy to GitHub Pages
 

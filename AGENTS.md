@@ -3,7 +3,7 @@
 ## Project summary
 - **Name:** Markdawn
 - **Type:** Web-based Markdown editor (preview is directly editable)
-- **Core stack:** React + Vite, TailwindCSS + DaisyUI, `@mdxeditor/editor`
+- **Core stack:** React + **TypeScript** + Vite, TailwindCSS + DaisyUI, `@mdxeditor/editor`
 - **Hosting:** GitHub Pages (static build)
 - **Offline:** PWA via `vite-plugin-pwa`
 
@@ -18,7 +18,7 @@
 - Build UI controls/layouts with DaisyUI components and classes first; avoid custom styling unless absolutely necessary.
 - Keep UI changes aligned with existing DaisyUI patterns and utility classes.
 - For MDXEditor content-node styling, prefer `lexicalTheme` class overrides first (inline code, quote, list, admonitions) and keep CSS for editor chrome (toolbar, dialogs, dropdown portals, CodeMirror shell).
-- Keep heavy editor/plugin wiring in `src/EditorWorkspace.jsx`, and keep `src/App.jsx` loading it lazily to protect startup performance.
+- Keep heavy editor/plugin wiring in `src/EditorWorkspace.tsx`, and keep `src/App.tsx` loading it lazily to protect startup performance.
 - Keep draft autosave writes debounced; flush pending session writes on critical actions/page hide and surface storage/quota write failures to users.
 - Preserve multi-tab behavior and per-tab dirty tracking:
   - `isDirty` drives Save button styling and unsaved indicators.
@@ -49,13 +49,15 @@
 - Install deps: `npm install`
 - Dev server: `npm run dev`
 - Production build: `npm run build`
+- Typecheck: `npm run typecheck`
 - Tests: `npm run test`
 - Coverage: `npm run test:coverage`
 - Deploy (manual): `npm run deploy`
 
 ## Quality gates
 - Keep tests passing.
-- Enforce coverage requirement: **>= 90%** for statements/functions/lines (configured in `vitest.config.js`).
+- Enforce coverage requirement: **>= 90%** for statements/functions/lines (configured in `vitest.config.ts`).
+- Keep TypeScript strict mode passing (`tsconfig.json` uses `"strict": true`).
 - Run `npm run test:coverage` for any non-trivial code change and do not merge if thresholds fail.
 
 ## Language and tools best practices
@@ -63,7 +65,7 @@
   - Prefer functional components and hooks.
   - Keep state transitions explicit and side effects contained.
   - Avoid unnecessary re-renders; use memoization only where it improves clarity/perf.
-- Keep JavaScript clear and defensive:
+- Keep TypeScript clear and defensive:
   - Avoid `any`-style escapes and implicit behavior.
   - Prefer small pure helpers for logic that benefits from direct unit tests.
   - Surface user-facing failures with clear messages; avoid silent failures.
