@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react'
 
-function EmojiCycler({ emojis, delay = 1000, className = '' }) {
+type EmojiCyclerProps = {
+  emojis: string[]
+  delay?: number
+  className?: string
+}
+
+function EmojiCycler({ emojis, delay = 1000, className = '' }: EmojiCyclerProps) {
   const [currentEmojiIndex, setCurrentEmojiIndex] = useState(0)
 
   useEffect(() => {
