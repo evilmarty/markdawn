@@ -2,7 +2,10 @@ import { forwardRef, useEffect, useImperativeHandle, useState } from 'react'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import packageJson from '../package.json'
 import App, { downloadTextFile, fileToDataUrl, loadDraftFromSession, makeTab } from './App'
+
+const APP_NAME = packageJson.name
 
 vi.mock('./EditorWorkspace', () => {
   const MockEditorWorkspace = ({
@@ -295,6 +298,22 @@ describe('App', () => {
     expect(screen.getByLabelText('Close sidebar')).toBeInTheDocument()
     await user.click(screen.getByLabelText('Close sidebar'))
     expect(screen.queryByLabelText('Close sidebar')).not.toBeInTheDocument()
+  })
+
+  it('updates the window title with the active document filename', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    expect(document.title).toBe(`untitled.md · ${APP_NAME}`)
+
+    await user.click(firstButton('Open'))
+    const fileInput = document.querySelector('input[type="file"]')
+    const file = new File(['# notes'], 'notes.md', { type: 'text/markdown' })
+    await user.upload(fileInput, file)
+
+    await waitFor(() => {
+      expect(document.title).toBe(`notes.md · ${APP_NAME}`)
+    })
   })
 
   it('loads stored session and keeps clean tab as non-dirty after normalize callback', async () => {

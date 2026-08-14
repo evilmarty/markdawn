@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FolderOpen, Plus, X } from 'lucide-react'
+import packageJson from '../package.json'
 import FrontmatterDialog from './components/FrontmatterDialog'
 import logoSvg from './assets/logo.svg?raw'
 import {
@@ -10,6 +11,8 @@ import {
   splitFrontmatter,
 } from './lib/frontmatter'
 import { useSessionDraftPersistence } from './hooks/useSessionDraftPersistence'
+
+const APP_NAME = packageJson.name
 
 const EditorWorkspace = lazy(() => import('./EditorWorkspace'))
 const STRIPPED_LOGO_SVG = logoSvg
@@ -179,6 +182,10 @@ function App() {
     const dataUrl = await fileToDataUrl(imageFile)
     return String(dataUrl)
   }, [])
+
+  useEffect(() => {
+    document.title = activeTab ? `${activeTab.fileName} · ${APP_NAME}` : APP_NAME
+  }, [activeTab])
 
   useEffect(() => {
     try {
