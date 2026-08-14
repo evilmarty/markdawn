@@ -57,7 +57,7 @@ body {
 }
 
 /* Map MDXEditor design tokens to DaisyUI theme tokens for editor + popup portals. */
-[data-theme] :is(.mdxeditor, .mdxeditor-popup-container) {
+:root :is(.mdxeditor, .mdxeditor-popup-container) {
   --basePageBg: oklch(var(--b1));
   --baseBase: oklch(var(--b1));
   --baseBgSubtle: oklch(var(--b2));
@@ -86,12 +86,12 @@ body {
   --accentTextContrast: oklch(var(--pc));
 }
 
-[data-theme] .mdxeditor-popup-container {
+:root .mdxeditor-popup-container {
   position: relative;
   z-index: 70;
 }
 
-[data-theme] [data-radix-popper-content-wrapper] {
+:root [data-radix-popper-content-wrapper] {
   z-index: 90 !important;
 }
 

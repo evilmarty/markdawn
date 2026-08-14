@@ -13,6 +13,7 @@
 - If intent appears risky and you are unsure whether to proceed safely, pause and ask first.
 - When in doubt, choose caution and ask for confirmation instead of assuming.
 - After every change, check for remnants (unused code, stale CSS/selectors, dead imports, outdated tests/docs) and clean them up before finishing.
+- Clean up any edits that did not contribute to the final outcome before finishing.
 - Use DaisyUI for **all UI-related styles**.
 - Build UI controls/layouts with DaisyUI components and classes first; avoid custom styling unless absolutely necessary.
 - Keep UI changes aligned with existing DaisyUI patterns and utility classes.
