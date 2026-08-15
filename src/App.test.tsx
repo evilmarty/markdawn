@@ -196,7 +196,7 @@ vi.mock('@mdxeditor/editor', async () => {
     imagePlugin,
     currentBlockType$: signal,
     currentListType$: signal,
-    applyBlockType$: signal,
+    convertSelectionToNode$: signal,
     applyListType$: signal,
     imageDialogState$: signal,
     linkDialogState$: signal,

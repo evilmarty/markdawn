@@ -6,9 +6,9 @@ import EditorToolbar from './Toolbar'
 const mocks = vi.hoisted(() => ({
   signals: {
     activeEditor$: Symbol('activeEditor'),
-    applyBlockType$: Symbol('applyBlockType'),
     applyFormat$: Symbol('applyFormat'),
     applyListType$: Symbol('applyListType'),
+    convertSelectionToNode$: Symbol('convertSelectionToNode'),
     currentBlockType$: Symbol('currentBlockType'),
     currentFormat$: Symbol('currentFormat'),
     currentListType$: Symbol('currentListType'),
@@ -137,9 +137,11 @@ describe('EditorToolbar', () => {
     fireEvent.change(select, { target: { value: 'list-bullet' } })
     fireEvent.change(select, { target: { value: 'list-number' } })
     fireEvent.change(select, { target: { value: 'h2' } })
+    fireEvent.change(screen.getAllByRole('combobox', { name: 'Block type' })[1], { target: { value: 'h3' } })
     expect(mocks.callMap.get(mocks.signals.applyListType$)).toHaveBeenCalledWith('bullet')
     expect(mocks.callMap.get(mocks.signals.applyListType$)).toHaveBeenCalledWith('number')
-    expect(mocks.callMap.get(mocks.signals.applyBlockType$)).toHaveBeenCalledWith('h2')
+    expect(mocks.callMap.get(mocks.signals.applyListType$)).toHaveBeenCalledWith('')
+    expect(mocks.callMap.get(mocks.signals.convertSelectionToNode$)).toHaveBeenCalledTimes(2)
 
     await user.click(screen.getAllByRole('button', { name: 'Edit frontmatter' })[0])
     expect(props.onOpenFrontmatterDialog).toHaveBeenCalled()

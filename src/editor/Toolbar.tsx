@@ -1,9 +1,9 @@
 import type { MouseEventHandler, ReactNode } from 'react'
 import {
   activeEditor$,
-  applyBlockType$,
   applyFormat$,
   applyListType$,
+  convertSelectionToNode$,
   currentBlockType$,
   currentFormat$,
   currentListType$,
@@ -18,6 +18,8 @@ import {
   openNewImageDialog$,
 } from '@mdxeditor/editor'
 import { useCellValue, usePublisher } from '@mdxeditor/gurx'
+import { $createHeadingNode, $createQuoteNode } from '@lexical/rich-text'
+import { $createParagraphNode, type ElementNode } from 'lexical'
 import { REDO_COMMAND, UNDO_COMMAND } from 'lexical'
 import type { SaveFileOptions } from '../types/app'
 import {
@@ -154,7 +156,7 @@ function InsertButtons() {
 function BlockTypeWithListsSelect() {
   const currentBlockType = useCellValue(currentBlockType$)
   const currentListType = useCellValue(currentListType$)
-  const applyBlockType = usePublisher(applyBlockType$)
+  const convertSelectionToNode = usePublisher(convertSelectionToNode$)
   const applyListType = usePublisher(applyListType$)
 
   const selectedValue =
@@ -186,9 +188,17 @@ function BlockTypeWithListsSelect() {
           applyListType('number')
           return
         }
-        applyListType('')
         if (isBlockType(nextValue)) {
-          applyBlockType(nextValue)
+          applyListType('')
+          if (nextValue === 'paragraph') {
+            convertSelectionToNode((): ElementNode => $createParagraphNode())
+            return
+          }
+          if (nextValue === 'quote') {
+            convertSelectionToNode((): ElementNode => $createQuoteNode())
+            return
+          }
+          convertSelectionToNode((): ElementNode => $createHeadingNode(nextValue))
         }
       }}
     >
