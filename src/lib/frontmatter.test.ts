@@ -5,6 +5,7 @@ import {
   parseFrontmatterRows,
   rowsToFrontmatter,
   splitFrontmatter,
+  validateFrontmatterRows,
 } from './frontmatter'
 
 describe('frontmatter utilities', () => {
@@ -39,5 +40,11 @@ describe('frontmatter utilities', () => {
     const yaml = rowsToFrontmatter(rows)
     expect(yaml).toContain('title: Demo')
     expect(yaml).toContain('draft: false')
+  })
+
+  it('returns row-level validation errors for invalid yaml values', () => {
+    const invalidRow = makeFrontmatterRow('tags', '[')
+    const errors = validateFrontmatterRows([invalidRow])
+    expect(errors[invalidRow.id]).toContain('Invalid YAML value')
   })
 })

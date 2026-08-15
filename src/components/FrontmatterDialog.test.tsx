@@ -19,6 +19,8 @@ describe('FrontmatterDialog', () => {
         open
         rows={[{ id: '1', key: 'title', value: 'Demo' }]}
         setRows={setRows}
+        validation={{ rowErrors: {}, message: null }}
+        onRowsEdited={vi.fn()}
         onCancel={onCancel}
         onSave={onSave}
       />,
@@ -37,6 +39,8 @@ describe('FrontmatterDialog', () => {
         open={false}
         rows={[]}
         setRows={vi.fn()}
+        validation={{ rowErrors: {}, message: null }}
+        onRowsEdited={vi.fn()}
         onCancel={vi.fn()}
         onSave={vi.fn()}
       />,

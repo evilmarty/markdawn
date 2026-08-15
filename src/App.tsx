@@ -11,6 +11,7 @@ import {
   parseFrontmatterRows,
   rowsToFrontmatter,
   splitFrontmatter,
+  validateFrontmatterRows,
 } from './lib/frontmatter'
 import { useSessionDraftPersistence } from './hooks/useSessionDraftPersistence'
 import type { AppTab, EditorHandle, SaveFileOptions, SessionDraft } from './types/app'
@@ -82,6 +83,18 @@ Welcome to Markdawn, your editable Markdown preview.
 type MakeTabOptions = Partial<Omit<AppTab, 'id' | 'isDirty'>> & {
   id?: string
   isDirty?: boolean
+}
+
+type FrontmatterValidationState = {
+  message: string | null
+  rowErrors: Record<string, string>
+}
+
+function emptyFrontmatterValidationState(): FrontmatterValidationState {
+  return {
+    message: null,
+    rowErrors: {},
+  }
 }
 
 function asError(error: unknown): Error {
@@ -187,6 +200,9 @@ function App() {
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true)
   const [frontmatterDialogOpen, setFrontmatterDialogOpen] = useState(false)
   const [frontmatterRows, setFrontmatterRows] = useState<FrontmatterRow[]>(() => [makeFrontmatterRow()])
+  const [frontmatterValidation, setFrontmatterValidation] = useState<FrontmatterValidationState>(
+    () => emptyFrontmatterValidationState(),
+  )
   const [, setStatusMessage] = useState(draftFromSession ? 'Recovered tabs from this browser session.' : 'Ready.')
   const editorRef = useRef<EditorHandle | null>(null)
   const fallbackOpenInputRef = useRef<HTMLInputElement | null>(null)
@@ -462,13 +478,37 @@ function App() {
     if (!activeTab) return
     const content = editorRef.current?.getMarkdown() ?? activeTab.markdown
     setFrontmatterRows(parseFrontmatterRows(content))
+    setFrontmatterValidation(emptyFrontmatterValidationState())
     setFrontmatterDialogOpen(true)
   }, [activeTab])
 
+  const clearFrontmatterValidationState = useCallback(() => {
+    setFrontmatterValidation(emptyFrontmatterValidationState())
+  }, [])
+
   const handleSaveFrontmatter = useCallback(() => {
     if (!activeTab) return
+    const rowErrors = validateFrontmatterRows(frontmatterRows)
+    if (Object.keys(rowErrors).length > 0) {
+      setFrontmatterValidation({
+        message: 'Fix invalid YAML values before saving front matter.',
+        rowErrors,
+      })
+      return
+    }
+
     const content = editorRef.current?.getMarkdown() ?? activeTab.markdown
-    const nextContent = applyFrontmatter(content, rowsToFrontmatter(frontmatterRows))
+    let nextContent: string
+    try {
+      nextContent = applyFrontmatter(content, rowsToFrontmatter(frontmatterRows))
+    } catch (error) {
+      setFrontmatterValidation({
+        message: `Could not save front matter: ${asError(error).message}`,
+        rowErrors: {},
+      })
+      return
+    }
+
     editorRef.current?.setMarkdown(nextContent)
     setTabs((prevTabs) => {
       const nextTabs = prevTabs.map((tab) =>
@@ -477,9 +517,10 @@ function App() {
       persistTabsToSession(nextTabs, currentActiveTabId, { flush: true })
       return nextTabs
     })
+    clearFrontmatterValidationState()
     setFrontmatterDialogOpen(false)
     setStatusMessage('Updated front matter.')
-  }, [activeTab, currentActiveTabId, frontmatterRows, persistTabsToSession])
+  }, [activeTab, clearFrontmatterValidationState, currentActiveTabId, frontmatterRows, persistTabsToSession])
 
   const saveButtonClass = activeTab?.isDirty ? 'btn btn-xs btn-primary' : 'btn btn-xs btn-primary btn-soft'
 
@@ -655,7 +696,12 @@ function App() {
         open={frontmatterDialogOpen}
         rows={frontmatterRows}
         setRows={setFrontmatterRows}
-        onCancel={() => setFrontmatterDialogOpen(false)}
+        validation={frontmatterValidation}
+        onRowsEdited={clearFrontmatterValidationState}
+        onCancel={() => {
+          clearFrontmatterValidationState()
+          setFrontmatterDialogOpen(false)
+        }}
         onSave={handleSaveFrontmatter}
       />
     </main>

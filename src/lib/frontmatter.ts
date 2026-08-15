@@ -6,6 +6,8 @@ export type FrontmatterRow = {
   value: string
 }
 
+export type FrontmatterValidationErrors = Record<string, string>
+
 export function splitFrontmatter(markdown: string): { frontmatter: string; body: string } {
   const match = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)
   if (!match) return { frontmatter: '', body: markdown }
@@ -55,6 +57,32 @@ export function parseFrontmatterRows(markdown: string): FrontmatterRow[] {
   }
 }
 
+function extractYamlErrorMessage(error: unknown): string {
+  if (!(error instanceof Error) || !error.message) {
+    return 'Invalid YAML value.'
+  }
+  const firstLine = error.message.split('\n')[0]?.trim()
+  return firstLine ? `Invalid YAML value: ${firstLine}` : 'Invalid YAML value.'
+}
+
+export function validateFrontmatterRows(rows: FrontmatterRow[]): FrontmatterValidationErrors {
+  const errors: FrontmatterValidationErrors = {}
+
+  for (const row of rows) {
+    const key = row.key.trim()
+    const value = row.value.trim()
+    if (!key || !value) continue
+
+    try {
+      YamlParser.load(value)
+    } catch (error) {
+      errors[row.id] = extractYamlErrorMessage(error)
+    }
+  }
+
+  return errors
+}
+
 export function rowsToFrontmatter(rows: FrontmatterRow[]): string {
   const data: Record<string, unknown> = {}
 
@@ -63,11 +91,7 @@ export function rowsToFrontmatter(rows: FrontmatterRow[]): string {
     const value = row.value.trim()
     if (!key || !value) continue
 
-    try {
-      data[key] = YamlParser.load(value)
-    } catch {
-      data[key] = value
-    }
+    data[key] = YamlParser.load(value)
   }
 
   if (Object.keys(data).length === 0) return ''

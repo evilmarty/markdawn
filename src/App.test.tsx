@@ -556,6 +556,23 @@ describe('App', () => {
     expect(screen.queryByText('Edit front matter')).not.toBeInTheDocument()
     expect(firstButton('Save')).not.toHaveClass('btn-soft')
   })
+
+  it('blocks frontmatter save when a row contains invalid yaml value', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(firstButton('Open Frontmatter'))
+    const inputs = screen.getAllByRole('textbox')
+    await user.clear(inputs[0])
+    await user.type(inputs[0], 'tags')
+    fireEvent.change(inputs[1], { target: { value: '[' } })
+
+    const saveButtons = screen.getAllByRole('button', { name: 'Save' })
+    await user.click(saveButtons[saveButtons.length - 1])
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Fix invalid YAML values before saving front matter.')
+    expect(screen.getByText('Edit front matter')).toBeInTheDocument()
+  })
 })
 
 describe('App helpers', () => {
