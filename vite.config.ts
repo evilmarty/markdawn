@@ -7,6 +7,9 @@ import packageJson from './package.json' with { type: 'json' }
 // https://vite.dev/config/
 export default defineConfig({
   base: './',
+  build: {
+    assetsInlineLimit: 0,
+  },
   plugins: [
     react(),
     tailwindcss(),

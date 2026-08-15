@@ -30,11 +30,6 @@ const EditorWorkspace = lazy(() => import('./EditorWorkspace'))
 const STRIPPED_LOGO_SVG = logoSvg
   .replace(/<\?xml[\s\S]*?\?>\s*/i, '')
   .replace(/<!DOCTYPE[\s\S]*?>\s*/i, '')
-const INLINE_LOGO_SVG = STRIPPED_LOGO_SVG
-  .replace(
-    /<svg\b([^>]*)>/i,
-    '<svg$1 class="h-8 w-14 fill-current text-base" role="img" aria-label="Markdawn">',
-  )
 const DEFAULT_LOGO_DATA_URL = `data:image/svg+xml;utf8,${encodeURIComponent(
   STRIPPED_LOGO_SVG
     .replace(/\bwidth="100%"/i, 'width="336"')
@@ -493,10 +488,13 @@ function App() {
           mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } ${desktopSidebarOpen ? 'lg:w-72 lg:p-3 lg:border-r' : 'lg:w-0 lg:p-0 lg:border-r-0 lg:overflow-hidden'}`}
       >
-        <div
-          className="mb-3 flex justify-center text-base-content"
-          dangerouslySetInnerHTML={{ __html: INLINE_LOGO_SVG }}
-        />
+        <div className="mb-3 flex justify-center">
+          <span
+            role="img"
+            aria-label="Markdawn"
+            className="mask-[url('/src/assets/logo.svg')] mask-center mask-contain mask-no-repeat h-8 w-14 bg-base-content"
+          />
+        </div>
         <div className="mb-3 flex gap-2">
           <button className="btn btn-sm flex-1" type="button" onClick={handleNewTab}>
             <Plus className="h-4 w-4" aria-hidden="true" />
