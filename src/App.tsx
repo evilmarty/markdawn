@@ -1,28 +1,22 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ChangeEvent } from 'react'
 import { FolderOpen, Plus, X } from 'lucide-react'
 import packageJson from '../package.json'
 import FrontmatterDialog from './components/FrontmatterDialog'
 import EmojiCycler from './components/EmojiCycler'
 import logoSvg from './assets/logo.svg?raw'
 import {
-  applyFrontmatter,
-  makeFrontmatterRow,
-  parseFrontmatterRows,
-  rowsToFrontmatter,
   splitFrontmatter,
-  validateFrontmatterRows,
 } from './lib/frontmatter'
 import {
-  downloadTextFile,
   fileToDataUrl,
   loadDraftFromSession,
-  makeTab,
   SESSION_STORAGE_KEY,
 } from './lib/utils'
 import { useSessionDraftPersistence } from './hooks/useSessionDraftPersistence'
-import type { AppTab, EditorHandle, SaveFileOptions, SessionDraft } from './types/app'
-import type { FrontmatterRow } from './lib/frontmatter'
+import { useTabsManager } from './hooks/useTabsManager'
+import { useFileOperations } from './hooks/useFileOperations'
+import { useFrontmatterWorkflow } from './hooks/useFrontmatterWorkflow'
+import type { EditorHandle, SessionDraft } from './types/app'
 
 const APP_NAME = packageJson.name
 
@@ -81,26 +75,12 @@ Welcome to Markdawn, your editable Markdown preview.
 > Tip: use the toolbar above to insert rich content quickly.
 `
 
-type FrontmatterValidationState = {
-  message: string | null
-  rowErrors: Record<string, string>
-}
-
-function emptyFrontmatterValidationState(): FrontmatterValidationState {
-  return {
-    message: null,
-    rowErrors: {},
-  }
-}
-
 function asError(error: unknown): Error {
   return error instanceof Error ? error : new Error('Unknown error')
 }
 
 function App() {
   const [draftFromSession] = useState<SessionDraft | null>(() => loadDraftFromSession(SESSION_STORAGE_KEY))
-  const [tabs, setTabs] = useState<AppTab[]>(() => draftFromSession?.tabs ?? [makeTab({ markdown: DEFAULT_MARKDOWN })])
-  const [activeTabId, setActiveTabId] = useState<string | null>(() => draftFromSession?.activeTabId ?? null)
   const [theme, setTheme] = useState<string>(() => {
     try {
       return sessionStorage.getItem(SESSION_THEME_KEY) ?? DEFAULT_THEME
@@ -110,11 +90,6 @@ function App() {
   })
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true)
-  const [frontmatterDialogOpen, setFrontmatterDialogOpen] = useState(false)
-  const [frontmatterRows, setFrontmatterRows] = useState<FrontmatterRow[]>(() => [makeFrontmatterRow()])
-  const [frontmatterValidation, setFrontmatterValidation] = useState<FrontmatterValidationState>(
-    () => emptyFrontmatterValidationState(),
-  )
   const [, setStatusMessage] = useState(draftFromSession ? 'Recovered tabs from this browser session.' : 'Ready.')
   const editorRef = useRef<EditorHandle | null>(null)
   const fallbackOpenInputRef = useRef<HTMLInputElement | null>(null)
@@ -122,21 +97,10 @@ function App() {
   const supportsOpenFilePicker = typeof window !== 'undefined' && 'showOpenFilePicker' in window
   const supportsSaveFilePicker = typeof window !== 'undefined' && 'showSaveFilePicker' in window
 
-  const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0]
-  const currentActiveTabId = activeTab?.id
-  const hasFrontmatter = useMemo(
-    () => Boolean(splitFrontmatter(activeTab?.markdown ?? '').frontmatter.trim()),
-    [activeTab?.markdown],
-  )
-
   const imageUploadHandler = useCallback(async (imageFile: File): Promise<string> => {
     const dataUrl = await fileToDataUrl(imageFile)
     return String(dataUrl)
   }, [])
-
-  useEffect(() => {
-    document.title = activeTab ? `${activeTab.fileName} · ${APP_NAME}` : APP_NAME
-  }, [activeTab])
 
   useEffect(() => {
     try {
@@ -162,313 +126,65 @@ function App() {
     setStatusMessage,
   })
 
-  const syncEditorValueIntoActiveTab = useCallback(() => {
-    if (!activeTab) return
-    const content = editorRef.current?.getMarkdown()
-    if (typeof content !== 'string') return
-    setTabs((prevTabs) => {
-      const tabIndex = prevTabs.findIndex((tab) => tab.id === activeTab.id)
-      if (tabIndex === -1) return prevTabs
-      const currentTab = prevTabs[tabIndex]
-      const nextIsDirty = content !== currentTab.savedMarkdown
-      if (currentTab.markdown === content && currentTab.isDirty === nextIsDirty) {
-        return prevTabs
-      }
-      const nextTabs = [...prevTabs]
-      nextTabs[tabIndex] = {
-        ...currentTab,
-        markdown: content,
-        isDirty: nextIsDirty,
-      }
-      return nextTabs
-    })
+  const {
+    tabs,
+    setTabs,
+    setActiveTabId,
+    activeTab,
+    currentActiveTabId,
+    syncEditorValueIntoActiveTab,
+    handleNewTab,
+    handleSwitchTab,
+    handleCloseTab,
+    applyEditorChange,
+  } = useTabsManager({
+    draftFromSession,
+    defaultMarkdown: DEFAULT_MARKDOWN,
+    editorRef,
+    persistTabsToSession,
+    setStatusMessage,
+  })
+
+  const hasFrontmatter = useMemo(
+    () => Boolean(splitFrontmatter(activeTab?.markdown ?? '').frontmatter.trim()),
+    [activeTab?.markdown],
+  )
+
+  useEffect(() => {
+    document.title = activeTab ? `${activeTab.fileName} · ${APP_NAME}` : APP_NAME
   }, [activeTab])
 
-  const handleNewTab = useCallback(() => {
-    syncEditorValueIntoActiveTab()
-    const nextTab = makeTab({ markdown: DEFAULT_MARKDOWN })
-    setTabs((prevTabs) => {
-      const nextTabs = [...prevTabs, nextTab]
-      persistTabsToSession(nextTabs, nextTab.id, { flush: true })
-      return nextTabs
-    })
-    setActiveTabId(nextTab.id)
-    setStatusMessage('Created a new tab.')
-  }, [persistTabsToSession, syncEditorValueIntoActiveTab])
+  const { handleOpenFile, onFallbackFilePicked, handleSaveFile } = useFileOperations({
+    activeTab,
+    currentActiveTabId,
+    editorRef,
+    fallbackOpenInputRef,
+    persistTabsToSession,
+    setActiveTabId,
+    setStatusMessage,
+    setTabs,
+    supportsOpenFilePicker,
+    supportsSaveFilePicker,
+    syncEditorValueIntoActiveTab,
+  })
 
-  const handleSwitchTab = useCallback(
-    (tabId: string) => {
-      if (tabId === currentActiveTabId) return
-      syncEditorValueIntoActiveTab()
-      setActiveTabId(tabId)
-      persistTabsToSession(tabs, tabId, { flush: true })
-    },
-    [currentActiveTabId, persistTabsToSession, syncEditorValueIntoActiveTab, tabs],
-  )
-
-  const handleCloseTab = useCallback(
-    (tabId: string) => {
-      const closingTab = tabs.find((tab) => tab.id === tabId)
-      if (!closingTab) return
-      const closingMarkdown =
-        tabId === currentActiveTabId ? (editorRef.current?.getMarkdown() ?? closingTab.markdown) : closingTab.markdown
-      const hasUnsavedChanges = tabId === currentActiveTabId ? closingMarkdown !== closingTab.savedMarkdown : closingTab.isDirty
-      if (hasUnsavedChanges) {
-        const shouldClose = window.confirm(
-          `"${closingTab.fileName}" has unsaved changes. Close this tab without saving?`,
-        )
-        if (!shouldClose) return
-      }
-
-      syncEditorValueIntoActiveTab()
-
-      if (tabs.length === 1) {
-        const resetTab = makeTab({ markdown: DEFAULT_MARKDOWN })
-        setTabs([resetTab])
-        setActiveTabId(resetTab.id)
-        persistTabsToSession([resetTab], resetTab.id, { flush: true })
-        setStatusMessage('Closed tab and started a new draft.')
-        return
-      }
-
-      const closingIndex = tabs.findIndex((tab) => tab.id === tabId)
-      if (closingIndex === -1) return
-
-      const nextTabs = tabs.filter((tab) => tab.id !== tabId)
-      const fallbackIndex = Math.max(0, closingIndex - 1)
-      const nextActiveTabId =
-        tabId === currentActiveTabId ? (nextTabs[fallbackIndex] ?? nextTabs[0]).id : currentActiveTabId
-
-      setTabs(nextTabs)
-      setActiveTabId(nextActiveTabId)
-      persistTabsToSession(nextTabs, nextActiveTabId, { flush: true })
-      setStatusMessage('Tab closed.')
-    },
-    [currentActiveTabId, persistTabsToSession, syncEditorValueIntoActiveTab, tabs],
-  )
-
-  const handleOpenFile = useCallback(async () => {
-    if (supportsOpenFilePicker && typeof window.showOpenFilePicker === 'function') {
-      try {
-        const handles = await window.showOpenFilePicker({
-          multiple: true,
-          types: [
-            {
-              description: 'Markdown files',
-              accept: {
-                'text/markdown': ['.md', '.markdown'],
-                'text/plain': ['.txt'],
-              },
-            },
-          ],
-          excludeAcceptAllOption: false,
-        })
-
-        const loadedTabs = await Promise.all(
-          handles.map(async (handle) => {
-            const file = await handle.getFile()
-            const text = await file.text()
-            return makeTab({ fileName: file.name, markdown: text, fileHandle: handle, savedMarkdown: text })
-          }),
-        )
-
-        if (loadedTabs.length > 0) {
-          syncEditorValueIntoActiveTab()
-          setTabs((prevTabs) => {
-            const nextTabs = [...prevTabs, ...loadedTabs]
-            const nextActiveTabId = loadedTabs[loadedTabs.length - 1].id
-            persistTabsToSession(nextTabs, nextActiveTabId, { flush: true })
-            return nextTabs
-          })
-          setActiveTabId(loadedTabs[loadedTabs.length - 1].id)
-          setStatusMessage(
-            loadedTabs.length === 1 ? `Opened ${loadedTabs[0].fileName}.` : `Opened ${loadedTabs.length} files.`,
-          )
-        }
-      } catch (error) {
-        const parsedError = asError(error)
-        if (parsedError.name !== 'AbortError') {
-          setStatusMessage(`Open failed: ${parsedError.message}`)
-        }
-      }
-      return
-    }
-
-    fallbackOpenInputRef.current?.click()
-  }, [persistTabsToSession, supportsOpenFilePicker, syncEditorValueIntoActiveTab])
-
-  const onFallbackFilePicked = useCallback(
-    async (event: ChangeEvent<HTMLInputElement>) => {
-      const selectedFiles = Array.from(event.target.files ?? [])
-      if (selectedFiles.length === 0) return
-
-      syncEditorValueIntoActiveTab()
-
-      const loadedTabs = await Promise.all(
-        selectedFiles.map(async (file) => {
-          const text = await file.text()
-          return makeTab({ fileName: file.name, markdown: text, savedMarkdown: text })
-        }),
-      )
-
-      setTabs((prevTabs) => {
-        const nextTabs = [...prevTabs, ...loadedTabs]
-        const nextActiveTabId = loadedTabs[loadedTabs.length - 1].id
-        persistTabsToSession(nextTabs, nextActiveTabId, { flush: true })
-        return nextTabs
-      })
-      setActiveTabId(loadedTabs[loadedTabs.length - 1].id)
-      setStatusMessage(
-        loadedTabs.length === 1 ? `Opened ${loadedTabs[0].fileName}.` : `Opened ${loadedTabs.length} files.`,
-      )
-      event.target.value = ''
-    },
-    [persistTabsToSession, syncEditorValueIntoActiveTab],
-  )
-
-  const handleSaveFile = useCallback(
-    async ({ saveAs = false }: SaveFileOptions = {}) => {
-      if (!activeTab) return
-      const content = editorRef.current?.getMarkdown() ?? activeTab.markdown
-
-      if (supportsSaveFilePicker && typeof window.showSaveFilePicker === 'function') {
-        try {
-          const handle =
-            !saveAs && activeTab.fileHandle
-              ? activeTab.fileHandle
-              : await window.showSaveFilePicker({
-                  suggestedName: activeTab.fileName,
-                  types: [
-                    {
-                      description: 'Markdown file',
-                      accept: { 'text/markdown': ['.md'] },
-                    },
-                  ],
-                })
-
-          const writable = await handle.createWritable()
-          await writable.write(content)
-          await writable.close()
-
-          setTabs((prevTabs) => {
-            const tabIndex = prevTabs.findIndex((tab) => tab.id === activeTab.id)
-            if (tabIndex === -1) return prevTabs
-            const currentTab = prevTabs[tabIndex]
-            const nextFileName = handle.name ?? currentTab.fileName
-            const noChange =
-              currentTab.markdown === content &&
-              currentTab.fileHandle === handle &&
-              currentTab.fileName === nextFileName &&
-              currentTab.savedMarkdown === content &&
-              currentTab.isDirty === false
-            if (noChange) return prevTabs
-
-            const nextTabs = [...prevTabs]
-            nextTabs[tabIndex] = {
-              ...currentTab,
-              markdown: content,
-              fileHandle: handle,
-              fileName: nextFileName,
-              savedMarkdown: content,
-              isDirty: false,
-            }
-            persistTabsToSession(nextTabs, currentActiveTabId, { flush: true })
-            return nextTabs
-          })
-          setStatusMessage(`Saved ${handle.name ?? activeTab.fileName}.`)
-          return
-        } catch (error) {
-          const parsedError = asError(error)
-          if (parsedError.name !== 'AbortError') {
-            setStatusMessage(`Save failed: ${parsedError.message}`)
-          }
-          return
-        }
-      }
-
-      downloadTextFile(content, activeTab.fileName)
-      setTabs((prevTabs) => {
-        const tabIndex = prevTabs.findIndex((tab) => tab.id === activeTab.id)
-        if (tabIndex === -1) return prevTabs
-        const currentTab = prevTabs[tabIndex]
-        const noChange =
-          currentTab.markdown === content &&
-          currentTab.savedMarkdown === content &&
-          currentTab.isDirty === false
-        if (noChange) return prevTabs
-
-        const nextTabs = [...prevTabs]
-        nextTabs[tabIndex] = {
-          ...currentTab,
-          markdown: content,
-          savedMarkdown: content,
-          isDirty: false,
-        }
-        persistTabsToSession(nextTabs, currentActiveTabId, { flush: true })
-        return nextTabs
-      })
-      setStatusMessage(`Downloaded ${activeTab.fileName} (save picker unavailable in this browser).`)
-    },
-    [activeTab, currentActiveTabId, persistTabsToSession, supportsSaveFilePicker],
-  )
-
-  const handleOpenFrontmatterDialog = useCallback(() => {
-    if (!activeTab) return
-    const content = editorRef.current?.getMarkdown() ?? activeTab.markdown
-    setFrontmatterRows(parseFrontmatterRows(content))
-    setFrontmatterValidation(emptyFrontmatterValidationState())
-    setFrontmatterDialogOpen(true)
-  }, [activeTab])
-
-  const clearFrontmatterValidationState = useCallback(() => {
-    setFrontmatterValidation(emptyFrontmatterValidationState())
-  }, [])
-
-  const handleSaveFrontmatter = useCallback(() => {
-    if (!activeTab) return
-    const rowErrors = validateFrontmatterRows(frontmatterRows)
-    if (Object.keys(rowErrors).length > 0) {
-      setFrontmatterValidation({
-        message: 'Fix invalid YAML values before saving front matter.',
-        rowErrors,
-      })
-      return
-    }
-
-    const content = editorRef.current?.getMarkdown() ?? activeTab.markdown
-    let nextContent: string
-    try {
-      nextContent = applyFrontmatter(content, rowsToFrontmatter(frontmatterRows))
-    } catch (error) {
-      setFrontmatterValidation({
-        message: `Could not save front matter: ${asError(error).message}`,
-        rowErrors: {},
-      })
-      return
-    }
-
-    editorRef.current?.setMarkdown(nextContent)
-    setTabs((prevTabs) => {
-      const tabIndex = prevTabs.findIndex((tab) => tab.id === activeTab.id)
-      if (tabIndex === -1) return prevTabs
-      const currentTab = prevTabs[tabIndex]
-      const nextIsDirty = nextContent !== currentTab.savedMarkdown
-      if (currentTab.markdown === nextContent && currentTab.isDirty === nextIsDirty) {
-        return prevTabs
-      }
-      const nextTabs = [...prevTabs]
-      nextTabs[tabIndex] = {
-        ...currentTab,
-        markdown: nextContent,
-        isDirty: nextIsDirty,
-      }
-      persistTabsToSession(nextTabs, currentActiveTabId, { flush: true })
-      return nextTabs
-    })
-    clearFrontmatterValidationState()
-    setFrontmatterDialogOpen(false)
-    setStatusMessage('Updated front matter.')
-  }, [activeTab, clearFrontmatterValidationState, currentActiveTabId, frontmatterRows, persistTabsToSession])
+  const {
+    frontmatterDialogOpen,
+    setFrontmatterDialogOpen,
+    frontmatterRows,
+    setFrontmatterRows,
+    frontmatterValidation,
+    clearFrontmatterValidationState,
+    handleOpenFrontmatterDialog,
+    handleSaveFrontmatter,
+  } = useFrontmatterWorkflow({
+    activeTab,
+    currentActiveTabId,
+    editorRef,
+    persistTabsToSession,
+    setStatusMessage,
+    setTabs,
+  })
 
   const saveButtonClass = activeTab?.isDirty ? 'btn btn-xs btn-primary' : 'btn btn-xs btn-primary btn-soft'
 
@@ -601,32 +317,7 @@ function App() {
                 hasFrontmatter={hasFrontmatter}
                 mobileSidebarOpen={mobileSidebarOpen}
                 desktopSidebarOpen={desktopSidebarOpen}
-                onChange={(nextMarkdown, initialMarkdownNormalize) => {
-                  setTabs((prevTabs) => {
-                    const tabIndex = prevTabs.findIndex((tab) => tab.id === activeTab.id)
-                    if (tabIndex === -1) return prevTabs
-                    const currentTab = prevTabs[tabIndex]
-                    const nextSavedMarkdown =
-                      initialMarkdownNormalize && !currentTab.isDirty ? nextMarkdown : currentTab.savedMarkdown
-                    const nextIsDirty =
-                      initialMarkdownNormalize && !currentTab.isDirty ? false : nextMarkdown !== currentTab.savedMarkdown
-                    const noChange =
-                      currentTab.markdown === nextMarkdown &&
-                      currentTab.savedMarkdown === nextSavedMarkdown &&
-                      currentTab.isDirty === nextIsDirty
-                    if (noChange) return prevTabs
-
-                    const nextTabs = [...prevTabs]
-                    nextTabs[tabIndex] = {
-                      ...currentTab,
-                      markdown: nextMarkdown,
-                      savedMarkdown: nextSavedMarkdown,
-                      isDirty: nextIsDirty,
-                    }
-                    persistTabsToSession(nextTabs, currentActiveTabId)
-                    return nextTabs
-                  })
-                }}
+                onChange={applyEditorChange}
                 onSaveFile={handleSaveFile}
                 onToggleMobileSidebar={() => setMobileSidebarOpen((open) => !open)}
                 onToggleDesktopSidebar={() => setDesktopSidebarOpen((open) => !open)}
