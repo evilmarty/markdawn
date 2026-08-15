@@ -8,8 +8,15 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json-summary'],
       include: [
-        'src/App.tsx',
-        'src/lib/frontmatter.ts',
+        'src/**/*.{ts,tsx}',
+      ],
+      exclude: [
+        'src/**/*.test.{ts,tsx}',
+        'src/test/**',
+        'src/vite-env.d.ts',
+        'src/main.tsx',
+        'src/types/**',
+        'src/editor/icons.ts',
       ],
       thresholds: {
         lines: 90,
