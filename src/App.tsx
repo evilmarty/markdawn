@@ -102,36 +102,6 @@ function asError(error: unknown): Error {
   return error instanceof Error ? error : new Error('Unknown error')
 }
 
-function areTabsEqual(a: AppTab, b: AppTab): boolean {
-  return (
-    a.id === b.id &&
-    a.fileName === b.fileName &&
-    a.markdown === b.markdown &&
-    a.fileHandle === b.fileHandle &&
-    a.savedMarkdown === b.savedMarkdown &&
-    a.isDirty === b.isDirty
-  )
-}
-
-function updateTabById(
-  prevTabs: AppTab[],
-  tabId: string,
-  updater: (tab: AppTab) => AppTab,
-): { nextTabs: AppTab[]; changed: boolean } {
-  const tabIndex = prevTabs.findIndex((tab) => tab.id === tabId)
-  if (tabIndex === -1) return { nextTabs: prevTabs, changed: false }
-
-  const currentTab = prevTabs[tabIndex]
-  const nextTab = updater(currentTab)
-  if (areTabsEqual(currentTab, nextTab)) {
-    return { nextTabs: prevTabs, changed: false }
-  }
-
-  const nextTabs = [...prevTabs]
-  nextTabs[tabIndex] = nextTab
-  return { nextTabs, changed: true }
-}
-
 function App() {
   const [draftFromSession] = useState<SessionDraft | null>(() => loadDraftFromSession(SESSION_STORAGE_KEY))
   const [tabs, setTabs] = useState<AppTab[]>(() => draftFromSession?.tabs ?? [makeTab({ markdown: DEFAULT_MARKDOWN })])
@@ -197,20 +167,27 @@ function App() {
     setStatusMessage,
   })
 
-  const updateTab = useCallback((tabId: string, updater: (tab: AppTab) => AppTab) => {
-    setTabs((prevTabs) => updateTabById(prevTabs, tabId, updater).nextTabs)
-  }, [])
-
   const syncEditorValueIntoActiveTab = useCallback(() => {
     if (!activeTab) return
     const content = editorRef.current?.getMarkdown()
     if (typeof content !== 'string') return
-    updateTab(activeTab.id, (tab) => ({
-      ...tab,
-      markdown: content,
-      isDirty: content !== tab.savedMarkdown,
-    }))
-  }, [activeTab, updateTab])
+    setTabs((prevTabs) => {
+      const tabIndex = prevTabs.findIndex((tab) => tab.id === activeTab.id)
+      if (tabIndex === -1) return prevTabs
+      const currentTab = prevTabs[tabIndex]
+      const nextIsDirty = content !== currentTab.savedMarkdown
+      if (currentTab.markdown === content && currentTab.isDirty === nextIsDirty) {
+        return prevTabs
+      }
+      const nextTabs = [...prevTabs]
+      nextTabs[tabIndex] = {
+        ...currentTab,
+        markdown: content,
+        isDirty: nextIsDirty,
+      }
+      return nextTabs
+    })
+  }, [activeTab])
 
   const handleNewTab = useCallback(() => {
     syncEditorValueIntoActiveTab()
@@ -379,14 +356,27 @@ function App() {
           await writable.close()
 
           setTabs((prevTabs) => {
-            const { nextTabs } = updateTabById(prevTabs, activeTab.id, (tab) => ({
-              ...tab,
+            const tabIndex = prevTabs.findIndex((tab) => tab.id === activeTab.id)
+            if (tabIndex === -1) return prevTabs
+            const currentTab = prevTabs[tabIndex]
+            const nextFileName = handle.name ?? currentTab.fileName
+            const noChange =
+              currentTab.markdown === content &&
+              currentTab.fileHandle === handle &&
+              currentTab.fileName === nextFileName &&
+              currentTab.savedMarkdown === content &&
+              currentTab.isDirty === false
+            if (noChange) return prevTabs
+
+            const nextTabs = [...prevTabs]
+            nextTabs[tabIndex] = {
+              ...currentTab,
               markdown: content,
               fileHandle: handle,
-              fileName: handle.name ?? tab.fileName,
+              fileName: nextFileName,
               savedMarkdown: content,
               isDirty: false,
-            }))
+            }
             persistTabsToSession(nextTabs, currentActiveTabId, { flush: true })
             return nextTabs
           })
@@ -403,12 +393,22 @@ function App() {
 
       downloadTextFile(content, activeTab.fileName)
       setTabs((prevTabs) => {
-        const { nextTabs } = updateTabById(prevTabs, activeTab.id, (tab) => ({
-          ...tab,
+        const tabIndex = prevTabs.findIndex((tab) => tab.id === activeTab.id)
+        if (tabIndex === -1) return prevTabs
+        const currentTab = prevTabs[tabIndex]
+        const noChange =
+          currentTab.markdown === content &&
+          currentTab.savedMarkdown === content &&
+          currentTab.isDirty === false
+        if (noChange) return prevTabs
+
+        const nextTabs = [...prevTabs]
+        nextTabs[tabIndex] = {
+          ...currentTab,
           markdown: content,
           savedMarkdown: content,
           isDirty: false,
-        }))
+        }
         persistTabsToSession(nextTabs, currentActiveTabId, { flush: true })
         return nextTabs
       })
@@ -454,11 +454,19 @@ function App() {
 
     editorRef.current?.setMarkdown(nextContent)
     setTabs((prevTabs) => {
-      const { nextTabs } = updateTabById(prevTabs, activeTab.id, (tab) => ({
-        ...tab,
+      const tabIndex = prevTabs.findIndex((tab) => tab.id === activeTab.id)
+      if (tabIndex === -1) return prevTabs
+      const currentTab = prevTabs[tabIndex]
+      const nextIsDirty = nextContent !== currentTab.savedMarkdown
+      if (currentTab.markdown === nextContent && currentTab.isDirty === nextIsDirty) {
+        return prevTabs
+      }
+      const nextTabs = [...prevTabs]
+      nextTabs[tabIndex] = {
+        ...currentTab,
         markdown: nextContent,
-        isDirty: nextContent !== tab.savedMarkdown,
-      }))
+        isDirty: nextIsDirty,
+      }
       persistTabsToSession(nextTabs, currentActiveTabId, { flush: true })
       return nextTabs
     })
@@ -597,19 +605,26 @@ function App() {
                 desktopSidebarOpen={desktopSidebarOpen}
                 onChange={(nextMarkdown, initialMarkdownNormalize) => {
                   setTabs((prevTabs) => {
-                    const { nextTabs, changed } = updateTabById(prevTabs, activeTab.id, (tab) => {
-                      const nextSavedMarkdown =
-                        initialMarkdownNormalize && !tab.isDirty ? nextMarkdown : tab.savedMarkdown
-                      const nextIsDirty =
-                        initialMarkdownNormalize && !tab.isDirty ? false : nextMarkdown !== tab.savedMarkdown
-                      return {
-                        ...tab,
-                        markdown: nextMarkdown,
-                        savedMarkdown: nextSavedMarkdown,
-                        isDirty: nextIsDirty,
-                      }
-                    })
-                    if (!changed) return prevTabs
+                    const tabIndex = prevTabs.findIndex((tab) => tab.id === activeTab.id)
+                    if (tabIndex === -1) return prevTabs
+                    const currentTab = prevTabs[tabIndex]
+                    const nextSavedMarkdown =
+                      initialMarkdownNormalize && !currentTab.isDirty ? nextMarkdown : currentTab.savedMarkdown
+                    const nextIsDirty =
+                      initialMarkdownNormalize && !currentTab.isDirty ? false : nextMarkdown !== currentTab.savedMarkdown
+                    const noChange =
+                      currentTab.markdown === nextMarkdown &&
+                      currentTab.savedMarkdown === nextSavedMarkdown &&
+                      currentTab.isDirty === nextIsDirty
+                    if (noChange) return prevTabs
+
+                    const nextTabs = [...prevTabs]
+                    nextTabs[tabIndex] = {
+                      ...currentTab,
+                      markdown: nextMarkdown,
+                      savedMarkdown: nextSavedMarkdown,
+                      isDirty: nextIsDirty,
+                    }
                     persistTabsToSession(nextTabs, currentActiveTabId)
                     return nextTabs
                   })
