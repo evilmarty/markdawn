@@ -4,7 +4,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import packageJson from '../package.json'
-import App, { downloadTextFile, fileToDataUrl, loadDraftFromSession, makeTab } from './App'
+import App from './App'
+import { downloadTextFile, fileToDataUrl, loadDraftFromSession, makeTab } from './lib/utils'
 import type { SaveFileOptions } from './types/app'
 
 const APP_NAME = packageJson.name

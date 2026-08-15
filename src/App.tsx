@@ -13,6 +13,13 @@ import {
   splitFrontmatter,
   validateFrontmatterRows,
 } from './lib/frontmatter'
+import {
+  downloadTextFile,
+  fileToDataUrl,
+  loadDraftFromSession,
+  makeTab,
+  SESSION_STORAGE_KEY,
+} from './lib/utils'
 import { useSessionDraftPersistence } from './hooks/useSessionDraftPersistence'
 import type { AppTab, EditorHandle, SaveFileOptions, SessionDraft } from './types/app'
 import type { FrontmatterRow } from './lib/frontmatter'
@@ -34,7 +41,6 @@ const DEFAULT_LOGO_DATA_URL = `data:image/svg+xml;utf8,${encodeURIComponent(
     .replace(/\bheight="100%"/i, 'height="192"'),
 )}`
 
-const SESSION_STORAGE_KEY = 'markdawn.session.v1'
 const SESSION_THEME_KEY = 'markdawn.theme'
 const DEFAULT_THEME = 'system'
 const FOOTER_EMOJIS = ['❤️', '🍺', '🌯', '🥃', '🍦']
@@ -80,11 +86,6 @@ Welcome to Markdawn, your editable Markdown preview.
 > Tip: use the toolbar above to insert rich content quickly.
 `
 
-type MakeTabOptions = Partial<Omit<AppTab, 'id' | 'isDirty'>> & {
-  id?: string
-  isDirty?: boolean
-}
-
 type FrontmatterValidationState = {
   message: string | null
   rowErrors: Record<string, string>
@@ -101,93 +102,9 @@ function asError(error: unknown): Error {
   return error instanceof Error ? error : new Error('Unknown error')
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
-function isPersistedTab(value: unknown): value is Pick<AppTab, 'id' | 'fileName' | 'markdown' | 'savedMarkdown' | 'isDirty'> {
-  if (!isRecord(value)) return false
-  return typeof value.fileName === 'string' && typeof value.markdown === 'string'
-}
-
-export function makeTab({
-  id,
-  fileName = 'untitled.md',
-  markdown = DEFAULT_MARKDOWN,
-  fileHandle = null,
-  savedMarkdown = markdown,
-  isDirty,
-}: MakeTabOptions = {}): AppTab {
-  const nextId =
-    id ??
-    (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-      ? crypto.randomUUID()
-      : `tab-${Date.now()}-${Math.random().toString(36).slice(2)}`)
-
-  return {
-    id: nextId,
-    fileName,
-    markdown,
-    fileHandle,
-    savedMarkdown,
-    isDirty: typeof isDirty === 'boolean' ? isDirty : markdown !== savedMarkdown,
-  }
-}
-
-export function loadDraftFromSession() {
-  try {
-    const rawSession = sessionStorage.getItem(SESSION_STORAGE_KEY)
-    if (rawSession) {
-      const parsed: unknown = JSON.parse(rawSession)
-      if (!isRecord(parsed)) return null
-      const tabs =
-        Array.isArray(parsed.tabs) && parsed.tabs.length > 0
-          ? parsed.tabs
-              .filter((tab): tab is Pick<AppTab, 'id' | 'fileName' | 'markdown' | 'savedMarkdown' | 'isDirty'> => isPersistedTab(tab))
-              .map((tab) =>
-                makeTab({
-                  id: typeof tab.id === 'string' ? tab.id : undefined,
-                  fileName: tab.fileName,
-                  markdown: tab.markdown,
-                  savedMarkdown: typeof tab.savedMarkdown === 'string' ? tab.savedMarkdown : tab.markdown,
-                  isDirty: typeof tab.isDirty === 'boolean' ? tab.isDirty : undefined,
-                }),
-              )
-          : []
-      if (tabs.length > 0) {
-        const activeTabId = tabs.some((tab) => tab.id === parsed.activeTabId) ? (parsed.activeTabId as string) : tabs[0].id
-        return { tabs, activeTabId }
-      }
-    }
-
-    return null
-  } catch {
-    return null
-  }
-}
-
-export function fileToDataUrl(file: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result ?? ''))
-    reader.onerror = () => reject(new Error('Failed to convert image to data URL.'))
-    reader.readAsDataURL(file)
-  })
-}
-
-export function downloadTextFile(content: string, fileName: string): void {
-  const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' })
-  const href = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = href
-  anchor.download = fileName
-  anchor.click()
-  URL.revokeObjectURL(href)
-}
-
 function App() {
-  const [draftFromSession] = useState<SessionDraft | null>(() => loadDraftFromSession())
-  const [tabs, setTabs] = useState<AppTab[]>(() => draftFromSession?.tabs ?? [makeTab()])
+  const [draftFromSession] = useState<SessionDraft | null>(() => loadDraftFromSession(SESSION_STORAGE_KEY))
+  const [tabs, setTabs] = useState<AppTab[]>(() => draftFromSession?.tabs ?? [makeTab({ markdown: DEFAULT_MARKDOWN })])
   const [activeTabId, setActiveTabId] = useState<string | null>(() => draftFromSession?.activeTabId ?? null)
   const [theme, setTheme] = useState<string>(() => {
     try {
@@ -272,7 +189,7 @@ function App() {
 
   const handleNewTab = useCallback(() => {
     syncEditorValueIntoActiveTab()
-    const nextTab = makeTab()
+    const nextTab = makeTab({ markdown: DEFAULT_MARKDOWN })
     setTabs((prevTabs) => {
       const nextTabs = [...prevTabs, nextTab]
       persistTabsToSession(nextTabs, nextTab.id, { flush: true })
@@ -309,7 +226,7 @@ function App() {
       syncEditorValueIntoActiveTab()
 
       if (tabs.length === 1) {
-        const resetTab = makeTab()
+        const resetTab = makeTab({ markdown: DEFAULT_MARKDOWN })
         setTabs([resetTab])
         setActiveTabId(resetTab.id)
         persistTabsToSession([resetTab], resetTab.id, { flush: true })
