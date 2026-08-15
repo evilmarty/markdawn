@@ -208,7 +208,7 @@ function App() {
           <span
             role="img"
             aria-label="Markdawn"
-            className="mask-[url('/src/assets/logo.svg')] mask-center mask-contain mask-no-repeat h-8 w-14 bg-base-content"
+            className="mask-(--markdawn-logo-url) mask-center mask-contain mask-no-repeat h-8 w-14 bg-base-content"
           />
         </div>
         <div className="mb-3 flex gap-2">

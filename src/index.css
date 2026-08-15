@@ -27,6 +27,7 @@
 
 :root {
   color-scheme: light;
+  --markdawn-logo-url: url('./assets/logo.svg');
 }
 
 body {
