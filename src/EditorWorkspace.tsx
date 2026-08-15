@@ -66,6 +66,10 @@ const editorLexicalTheme = {
   },
 }
 
+function LinkDialogWrapper(): JSX.Element {
+  return <DaisyLinkDialog />
+}
+
 export type EditorWorkspaceProps = {
   activeTab: AppTab | null
   editorRef: RefObject<EditorHandle | null>
@@ -120,7 +124,7 @@ function EditorWorkspace({
       quotePlugin(),
       thematicBreakPlugin(),
       linkPlugin(),
-      linkDialogPlugin({ LinkDialog: DaisyLinkDialog as unknown as () => JSX.Element }),
+      linkDialogPlugin({ LinkDialog: LinkDialogWrapper }),
       tablePlugin(),
       codeBlockPlugin({ defaultCodeBlockLanguage: 'txt' }),
       codeMirrorPlugin({ codeBlockLanguages: CODE_BLOCK_LANGUAGES }),
@@ -128,7 +132,7 @@ function EditorWorkspace({
       imagePlugin({
         imageUploadHandler,
         ImageDialog: DaisyImageDialog,
-        EditImageToolbar: DaisyEditImageToolbar as unknown as () => JSX.Element,
+        EditImageToolbar: DaisyEditImageToolbar,
       }),
     ],
     [
