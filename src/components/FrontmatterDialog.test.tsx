@@ -1,6 +1,8 @@
+import type { SetStateAction } from 'react'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { FrontmatterRow } from '../lib/frontmatter'
 import FrontmatterDialog from './FrontmatterDialog'
 
 describe('FrontmatterDialog', () => {
@@ -50,7 +52,10 @@ describe('FrontmatterDialog', () => {
 
   it('edits rows, shows validation, and supports add/remove', async () => {
     const user = userEvent.setup()
-    const setRows = vi.fn()
+    const setRows = vi.fn((update: SetStateAction<FrontmatterRow[]>): void => {
+      const currentRows = [{ id: '1', key: 'title', value: 'Demo' }]
+      if (typeof update === 'function') update(currentRows)
+    })
     const onRowsEdited = vi.fn()
 
     render(
